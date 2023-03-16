@@ -9,6 +9,7 @@
 		<RootNamespace>MT.Toolkit</RootNamespace>
 		<Version>1.0.7.2</Version>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<AssemblyName>MT.Toolkit</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
