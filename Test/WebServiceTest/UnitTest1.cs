@@ -43,6 +43,10 @@ namespace WebServiceTest
                 ["szUser"] = "admin",
                 ["szPass"] = "admin123"
             });
+            var code = response.GetValue<int>("//returncode");
+            var message = response.GetValue("//reason");
+            Assert.True(code == 200);
+            Assert.True(message == "ÃÜÂë²»ÕıÈ·!");
         }
     }
 }
