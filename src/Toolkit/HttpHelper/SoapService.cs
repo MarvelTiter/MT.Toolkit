@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Xml.Linq;
+using System.Data.SqlTypes;
+
 
 
 #if NET6_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
@@ -80,21 +82,28 @@ namespace MT.Toolkit.HttpHelper
             {
                 httpContent = new StringContent(content, Encoding.UTF8, "application/soap+xml");
             }
-            HttpResponseMessage response = await client.PostAsync(url, httpContent);
-            var result = await response.Content.ReadAsStringAsync(); //得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
-            return ExtractReturnXml(result);
-        }
+            try
+            {
+                HttpResponseMessage response = await client.PostAsync(url, httpContent);
 
-        internal SoapResponse ExtractReturnXml(string xmlString)
-        {
-            using var reader = new StringReader(xmlString);
-            using var xmlReader = XmlReader.Create(reader);
-            var doc = XDocument.Load(xmlReader);
-            XmlNameTable nameTable = xmlReader.NameTable;
-            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(nameTable);
-            namespaceManager.AddNamespace("soap", "http://schemas.xmlsoap.org/soap/envelope/");
-            var innerXml = doc.XPathSelectElement("//soap:Body", namespaceManager)?.Value;
-            return new SoapResponse(innerXml);
+                // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
+                var result = await response.Content.ReadAsStringAsync();
+                // 解析内容
+                using var reader = new StringReader(result);
+                using var xmlReader = XmlReader.Create(reader);
+                var doc = XDocument.Load(xmlReader);
+                XmlNameTable nameTable = xmlReader.NameTable;
+                XmlNamespaceManager namespaceManager = new XmlNamespaceManager(nameTable);
+                namespaceManager.AddNamespace("soap", "http://schemas.xmlsoap.org/soap/envelope/");
+                var innerXml = doc.XPathSelectElement("//soap:Body", namespaceManager)?.Value;
+                return new SoapResponse(result, innerXml);
+
+            }
+            catch (Exception ex)
+            {
+                return new SoapResponse(ex);
+            }
+
         }
 
         //protected virtual void Dispose(bool disposing)

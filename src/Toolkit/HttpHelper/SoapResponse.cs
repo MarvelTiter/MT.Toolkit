@@ -22,16 +22,32 @@ namespace MT.Toolkit.HttpHelper
         public string Prefix { get; }
         public string Uri { get; }
     }
-    public class SoapResponse
+    public sealed class SoapResponse
     {
+        /// <summary>
+        /// 请求是否发送成功
+        /// </summary>
+        public bool Success { get; set; } = true;
+        /// <summary>
+        /// 请求发生异常或解析返回数据时发生异常的异常信息
+        /// </summary>
+        public string? Message { get; set; }
         private readonly string? rawValue;
+        private readonly string? responseContent;
         private XmlNamespaceManager? nsManager;
         //private XmlReader? xmlReader;
-        public SoapResponse(string? rawValue)
+        internal SoapResponse(string? responseContent ,string? rawValue)
         {
+            this.responseContent = responseContent;
             this.rawValue = rawValue;
         }
 
+        internal SoapResponse(Exception ex)
+        {
+            Success = false;
+            Message = ex.Message;
+        }
+        public string? RawContent => responseContent;
         public string? RawValue => rawValue;
 
         private XDocument? xml;
@@ -58,13 +74,17 @@ namespace MT.Toolkit.HttpHelper
 
         public string? GetValue(string expression, Func<IEnumerable<XmlnsItem>>? configNamespaces = null)
         {
+            return GetNode(expression, configNamespaces)?.Value;
+        }
+
+        public XElement? GetNode(string expression, Func<IEnumerable<XmlnsItem>>? configNamespaces = null)
+        {
             var ns = configNamespaces?.Invoke() ?? Enumerable.Empty<XmlnsItem>();
             foreach (var nsItem in ns)
             {
                 nsManager?.AddNamespace(nsItem.Prefix, nsItem.Uri);
             }
-            var value = Xml?.XPathSelectElement(expression, nsManager)?.Value;
-            return value;
+            return Xml?.XPathSelectElement(expression, nsManager);
         }
 
         public T? GetValue<T>(string expression, Func<IEnumerable<XmlnsItem>>? configNamespaces = null)
