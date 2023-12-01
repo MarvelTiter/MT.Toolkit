@@ -17,35 +17,34 @@ namespace MT.Toolkit.HttpHelper
         public static dynamic AsDynamic(this XElement root)
         {
             var ret = new ExpandoObject();
+            var values = new Dictionary<string, List<object>>();
             foreach (var p in root.Elements())
             {
+                var key = p.Name.LocalName;
+                object? val;
                 if (p.Elements().Count() > 0)
                 {
-                    ret.TryAdd(p.Name.LocalName, Inner(p));
+                    val = AsDynamic(p);
                 }
                 else
                 {
-                    ret.TryAdd(p.Name.LocalName, p.Value);
+                    val = p.Value;
                 }
-            }
-            return ret;
-
-            static object Inner(XElement child)
-            {
-                var ret1 = new ExpandoObject();
-                foreach (var p in child.Elements())
+                if (!values.TryGetValue(key, out var list))
                 {
-                    if (p.Elements().Count() > 0)
-                    {
-                        ret1.TryAdd(p.Name.LocalName, Inner(p));
-                    }
-                    else
-                    {
-                        ret1.TryAdd(p.Name.LocalName, p.Value);
-                    }
+                    list = new List<object>();
+                    values[key] = list;
                 }
-                return ret1;
+                list.Add(val);
             }
+
+            foreach (var item in values)
+            {
+                var v = item.Value.Count > 1 ? item.Value : item.Value[0];
+                ret.TryAdd(item.Key, v);
+            }
+
+            return ret;
         }
 
         public static string? GetValue(this XElement? element, string path, XmlNamespaceManager? nsManager = null)
@@ -120,7 +119,7 @@ namespace MT.Toolkit.HttpHelper
 
         public dynamic? ReadReturnValue() => ReadReturnValue<object>();
 
-        public T? ReadOutValue<T>()
+        public T? ReadParameterReturnValue<T>()
         {
             var outParam = xml?.XPathSelectElement($"r:{methodName}Result", nsManager)?.ElementsAfterSelf()?.FirstOrDefault();
             if (outParam == null) return default;
@@ -136,7 +135,7 @@ namespace MT.Toolkit.HttpHelper
             return outParam.AsDynamic();
         }
 
-        public dynamic? ReadOutValue() => ReadOutValue<object>();
+        public dynamic? ReadParameterReturnValue() => ReadParameterReturnValue<object>();
 
         private XElement? retXml;
 

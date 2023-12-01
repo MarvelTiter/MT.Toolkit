@@ -43,7 +43,9 @@ namespace WebServiceTest
                     config.ResponseNamespace = "";
                 }).AddSoapService("Sec", config =>
                 {
-                    config.Url = "Sec";
+                    config.Url = "";
+                    config.RequestNamespace = "";
+                    config.ResponseNamespace = "";
                 })
                 .SetDefault("Sec");
             });
@@ -52,11 +54,19 @@ namespace WebServiceTest
             var fac = provider.GetService<ISoapServiceFactory>();
             var main = fac!.GetSoapService("Main");
 
+            var ris = fac!.GetSoapService("Sec");
 
-            var response = await main.SendAsync("Login", new()
+            var login = await ris.SendAsync("Login", new()
             {
                 ["szUser"] = "admin",
                 ["szPass"] = "hgbanner"
+            });
+
+            var response = await main.SendAsync("UpdateLst", new()
+            {
+                ["lTick"] = 0,
+                ["typeid"] = 1,
+                ["MyGuid"] = login.ReadReturnValueAsXml()?.GetValue("//Guid")!
             });
             var d = response.ReadReturnValueAsXml()?.AsDynamic();
 
