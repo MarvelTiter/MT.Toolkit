@@ -3,25 +3,65 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 namespace MT.Toolkit.HttpHelper
 {
-
-    public record XmlnsItem
+    public static class XElementExtensions
     {
-        public XmlnsItem(string Prefix, string Uri)
+        public static dynamic AsDynamic(this XElement root)
         {
-            this.Prefix = Prefix;
-            this.Uri = Uri;
+            var ret = new ExpandoObject();
+            foreach (var p in root.Elements())
+            {
+                if (p.Elements().Count() > 0)
+                {
+                    ret.TryAdd(p.Name.LocalName, Inner(p));
+                }
+                else
+                {
+                    ret.TryAdd(p.Name.LocalName, p.Value);
+                }
+            }
+            return ret;
+
+            static object Inner(XElement child)
+            {
+                var ret1 = new ExpandoObject();
+                foreach (var p in child.Elements())
+                {
+                    if (p.Elements().Count() > 0)
+                    {
+                        ret1.TryAdd(p.Name.LocalName, Inner(p));
+                    }
+                    else
+                    {
+                        ret1.TryAdd(p.Name.LocalName, p.Value);
+                    }
+                }
+                return ret1;
+            }
         }
 
-        public string Prefix { get; }
-        public string Uri { get; }
+        public static string? GetValue(this XElement? element, string path, XmlNamespaceManager? nsManager = null)
+        {
+            return element?.XPathSelectElement(path, nsManager)?.Value;
+        }
+        public static T? GetValue<T>(this XElement? element, string path, XmlNamespaceManager? nsManager = null) where T : struct
+        {
+            var str = GetValue(element, path, nsManager);
+            if (string.IsNullOrEmpty(str)) return default;
+            var ret = Convert.ChangeType(str, typeof(T));
+            if (ret == null) return default;
+            return (T?)ret;
+        }
     }
+
     public sealed class SoapResponse
     {
         /// <summary>
@@ -35,11 +75,22 @@ namespace MT.Toolkit.HttpHelper
         private readonly string? rawValue;
         private readonly string? responseContent;
         private XmlNamespaceManager? nsManager;
+        private readonly string? methodName;
+
         //private XmlReader? xmlReader;
-        internal SoapResponse(string? responseContent ,string? rawValue)
+        internal SoapResponse(string? responseContent, string? rawValue, XmlNamespaceManager manager, string? methodName)
         {
             this.responseContent = responseContent;
             this.rawValue = rawValue;
+            nsManager = manager;
+            this.methodName = methodName;
+
+            if (rawValue != null)
+            {
+                using var reader = new StringReader(rawValue);
+                using var xmlReader = XmlReader.Create(reader);
+                xml = XElement.Load(xmlReader);
+            }
         }
 
         internal SoapResponse(Exception ex)
@@ -50,50 +101,92 @@ namespace MT.Toolkit.HttpHelper
         public string? RawContent => responseContent;
         public string? RawValue => rawValue;
 
-        private XDocument? xml;
-        public XDocument? Xml
+        private XElement? xml;
+
+        public T? ReadReturnValue<T>()
         {
-            get
+            var type = typeof(T);
+            if (type != typeof(object))
             {
-                try
-                {
-                    if (rawValue != null && xml == null)
-                    {
-                        using var reader = new StringReader(rawValue);
-                        using var xmlReader = XmlReader.Create(reader);
-                        nsManager = new XmlNamespaceManager(xmlReader.NameTable);
-                        xml = XDocument.Load(xmlReader);
-                    }
-                }
-                catch
-                {
-                }
-                return xml;
+                var str = xml?.GetValue($"//r:{methodName}Result", nsManager);
+                if (string.IsNullOrEmpty(str)) return default;
+                var ret = Convert.ChangeType(str, typeof(T));
+                if (ret == null) return default;
+                return (T?)ret;
             }
+            // 序列化返回的结果
+            return GetNode($"//r:{methodName}Result")?.AsDynamic();
         }
 
-        public string? GetValue(string expression, Func<IEnumerable<XmlnsItem>>? configNamespaces = null)
-        {
-            return GetNode(expression, configNamespaces)?.Value;
-        }
+        public dynamic? ReadReturnValue() => ReadReturnValue<object>();
 
-        public XElement? GetNode(string expression, Func<IEnumerable<XmlnsItem>>? configNamespaces = null)
+        public T? ReadOutValue<T>()
         {
-            var ns = configNamespaces?.Invoke() ?? Enumerable.Empty<XmlnsItem>();
-            foreach (var nsItem in ns)
+            var outParam = xml?.XPathSelectElement($"r:{methodName}Result", nsManager)?.ElementsAfterSelf()?.FirstOrDefault();
+            if (outParam == null) return default;
+            var type = typeof(T);
+            if (type != typeof(object))
             {
-                nsManager?.AddNamespace(nsItem.Prefix, nsItem.Uri);
+                var str = outParam.Value;
+                if (string.IsNullOrEmpty(str)) return default;
+                var ret = Convert.ChangeType(str, typeof(T));
+                if (ret == null) return default;
+                return (T?)ret;
             }
-            return Xml?.XPathSelectElement(expression, nsManager);
+            return outParam.AsDynamic();
         }
 
-        public T? GetValue<T>(string expression, Func<IEnumerable<XmlnsItem>>? configNamespaces = null)
+        public dynamic? ReadOutValue() => ReadOutValue<object>();
+
+        private XElement? retXml;
+
+        /// <summary>
+        /// 如果返回的结果可以解释为XML
+        /// </summary>
+        /// <returns></returns>
+        public XElement? ReadReturnValueAsXml()
         {
-            var str = GetValue(expression, configNamespaces);
-            if (string.IsNullOrEmpty(str)) return default;
-            var ret = Convert.ChangeType(str, typeof(T));
-            if (ret == null) return default;
-            return (T?)ret;
+            if (retXml == null)
+            {
+                var raw = GetValue($"//r:{methodName}Result");
+                if (raw != null)
+                {
+                    using var reader = new StringReader(raw);
+                    using var xmlReader = XmlReader.Create(reader);
+                    retXml = XElement.Load(xmlReader);
+                }
+            }
+            return retXml;
+        }
+
+        /// <summary>
+        /// 从接口响应的Xml中获取数据，需要加上前缀 <b>r</b>
+        /// </summary>
+        /// <param name="expression"></param>
+        /// <returns></returns>
+        public string? GetValue(string expression) => xml?.GetValue(expression, nsManager);
+
+        /// <summary>
+        /// 从接口响应的Xml中获取数据，需要加上前缀 <b>r</b>
+        /// </summary>
+        /// <param name="expression"></param>
+        /// <returns></returns>
+        private XElement? GetNode(string expression) => xml?.XPathSelectElement(expression, nsManager);
+
+        /// <summary>
+        /// 从接口响应的Xml中获取数据，需要加上前缀 <b>r</b>
+        /// </summary>
+        /// <typeparam name="T">值类型</typeparam>
+        /// <param name="expression"></param>
+        /// <returns></returns>
+        public T? GetValue<T>(string expression) where T : struct
+        {
+            //var str = xml?.GetValue(expression, nsManager);
+            //if (string.IsNullOrEmpty(str)) return default;
+            //var ret = Convert.ChangeType(str, typeof(T));
+            //if (ret == null) return default;
+            //return (T?)ret;
+            return xml?.GetValue<T>(expression, nsManager);
         }
     }
 }

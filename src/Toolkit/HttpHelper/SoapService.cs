@@ -25,6 +25,45 @@ namespace MT.Toolkit.HttpHelper
         private readonly string responseNamespace;
         private bool disposedValue;
 
+        private string EnvelopeNs
+        {
+            get
+            {
+                if (version != SoapVersion.Soap12)
+                {
+                    return "http://schemas.xmlsoap.org/soap/envelope/";
+                }
+
+                return "http://www.w3.org/2003/05/soap-envelope";
+            }
+        }
+
+        private string EncodingNs
+        {
+            get
+            {
+                if (version != SoapVersion.Soap12)
+                {
+                    return "http://schemas.xmlsoap.org/soap/encoding/";
+                }
+
+                return "http://www.w3.org/2003/05/soap-encoding";
+            }
+        }
+
+        private string HttpContentType
+        {
+            get
+            {
+                if (version != SoapVersion.Soap12)
+                {
+                    return "text/xml";
+                }
+
+                return "application/soap+xml";
+            }
+        }
+
         public SoapService(HttpClient client, SoapServiceConfiguration configuration)
         {
             this.client = client;
@@ -55,14 +94,17 @@ namespace MT.Toolkit.HttpHelper
             this.url = url;
             this.version = version;
             this.requestNamespace = requestNamespace.EndsWith('/') ? requestNamespace : requestNamespace + '/';
-            this.responseNamespace = responseNamespace;
+            this.responseNamespace = responseNamespace.EndsWith('/') ? requestNamespace : requestNamespace + '/';
         }
-        public async Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object> args)
+        public async Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null)
         {
             StringBuilder contentString = new StringBuilder();
-            foreach (var item in args)
+            if (args != null)
             {
-                contentString.Append($"<{item.Key}><![CDATA[{item.Value}]]></{item.Key}>");
+                foreach (var item in args)
+                {
+                    contentString.Append($"<{item.Key}><![CDATA[{item.Value}]]></{item.Key}>");
+                }
             }
             string content = $@"<soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"">
                    <soapenv:Body>
@@ -71,32 +113,32 @@ namespace MT.Toolkit.HttpHelper
                      </{methodName}>
                  </soapenv:Body>
               </soapenv:Envelope>";
-            HttpContent httpContent;
             if (version == SoapVersion.Soap11)
             {
                 client.DefaultRequestHeaders.Remove("SOAPAction");
                 client.DefaultRequestHeaders.Add("SOAPAction", $"{requestNamespace}{methodName}");
-                httpContent = new StringContent(content, Encoding.UTF8, "text/xml");
             }
-            else
-            {
-                httpContent = new StringContent(content, Encoding.UTF8, "application/soap+xml");
-            }
+            HttpContent  httpContent = new StringContent(content, Encoding.UTF8, HttpContentType);
             try
             {
                 HttpResponseMessage response = await client.PostAsync(url, httpContent);
 
                 // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
-                var result = await response.Content.ReadAsStringAsync();
+                var result = await response.Content.ReadAsStreamAsync();
+                var rawContent = await response.Content.ReadAsStringAsync();
                 // 解析内容
-                using var reader = new StringReader(result);
-                using var xmlReader = XmlReader.Create(reader);
+                //using var reader = new StringReader(result);
+                using var xmlReader = XmlReader.Create(result);
                 var doc = XDocument.Load(xmlReader);
                 XmlNameTable nameTable = xmlReader.NameTable;
                 XmlNamespaceManager namespaceManager = new XmlNamespaceManager(nameTable);
                 namespaceManager.AddNamespace("soap", "http://schemas.xmlsoap.org/soap/envelope/");
-                var innerXml = doc.XPathSelectElement("//soap:Body", namespaceManager)?.Value;
-                return new SoapResponse(result, innerXml);
+                if (!string.IsNullOrEmpty(responseNamespace))
+                {
+                    namespaceManager.AddNamespace("r", responseNamespace);
+                }
+                var innerXml = doc.XPathSelectElement($"//soap:Body/r:{methodName}Response", namespaceManager)?.ToString();
+                return new SoapResponse(rawContent, innerXml, namespaceManager, methodName);
 
             }
             catch (Exception ex)

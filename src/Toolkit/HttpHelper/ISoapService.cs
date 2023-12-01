@@ -9,7 +9,7 @@ namespace MT.Toolkit.HttpHelper
 
     public interface ISoapService //: IDisposable
     {
-        Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object> args);
+        Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null);
     }
 }
 #endif
