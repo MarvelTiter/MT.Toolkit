@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
+#nullable disable
 namespace MT.Toolkit.Mapper
 {
 	public enum ActionType

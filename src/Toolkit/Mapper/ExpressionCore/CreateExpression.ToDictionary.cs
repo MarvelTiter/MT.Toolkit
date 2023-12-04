@@ -21,7 +21,7 @@ namespace MT.KitTools.Mapper.ExpressionCore
                 throw new ArgumentException("key type must be string");
             }
             var dicType = typeof(Dictionary<,>).MakeGenericType(genericArgs);
-            MethodInfo addMethod = dicType.GetMethod("Add", genericArgs);
+            MethodInfo addMethod = dicType.GetMethod("Add", genericArgs)!;
             var props = p.SourceType.GetProperties();
 
             // var dic = new Dictionary<string, object>();

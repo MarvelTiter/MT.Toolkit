@@ -167,7 +167,7 @@ namespace WebServiceTest
             var retVal = doc.XPathSelectElement("//soap:Body/r:GetDetailOFUserResponse", namespaceManager)?.ToString();
             var response = new SoapResponse(responseXml, retVal, namespaceManager, "GetDetailOFUser");
             var ret = response.ReadReturnValue();
-            var o = response.ReadOutValue();
+            var o = response.ReadParameterReturnValue();
 
             Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_ID == "admin ");
             Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_NAME == "π‹¿Ì‘± ");
