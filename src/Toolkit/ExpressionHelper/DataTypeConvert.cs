@@ -39,7 +39,9 @@ namespace MT.Toolkit.ExpressionHelper
 			}
 			else
 			{
-				return Expression.Convert(source, targetType);
+				// Convert.ChangeType
+				var changeType = typeof(Convert).GetMethod("ChangeType", [typeof(object), typeof(Type)] );
+				return Expression.Convert(Expression.Call(changeType, source, Expression.Constant(targetType)), targetType);
 			}
 		}
 		private static Expression GetArrayHandlerExpression(Expression sourceExpression, Type targetType)

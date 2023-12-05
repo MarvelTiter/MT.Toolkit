@@ -28,17 +28,17 @@ namespace MapperTest
         {
             var d = DateTime.Now;
             var source = new ExpandoObject();
-            source.TryAdd("P1", 1);
+            source.TryAdd("P1", "1");
             source.TryAdd("P2", "hello");
-            source.TryAdd("P3", true);
-            source.TryAdd("P4", d);
+            source.TryAdd("P3", "true");
+            source.TryAdd("P4", d.ToString("yyyy-MM-dd HH:mm:ss"));
 
             var ret = Mapper.Map<IDictionary<string, object?>, CModel>(source);
 
             Assert.IsTrue(ret.P1 == 1);
             Assert.IsTrue(ret.P2 == "hello");
             Assert.IsTrue(ret.P3 == true);
-            Assert.IsTrue(ret.P4 == d);
+            Assert.IsTrue(ret.P4.ToString() == d.ToString());
         }
 
         [TestMethod]
