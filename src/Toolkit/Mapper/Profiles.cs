@@ -15,8 +15,8 @@ namespace MT.Toolkit.Mapper
 		protected Type[] types;
 		protected Type SourceType => types[0];
 		protected Type TargetType => types[1];
-		protected Type SourceElementType => SourceType.IsICollectionType() ? SourceType.GetCollectionElementType() : SourceType;
-		protected Type TargetElementType => TargetType.IsICollectionType() ? TargetType.GetCollectionElementType() : TargetType;
+		protected Type SourceElementType => SourceType.IsICollectionType() || SourceType.IsIEnumerableType() ? SourceType.GetCollectionElementType() : SourceType;
+		protected Type TargetElementType => TargetType.IsICollectionType() || SourceType.IsIEnumerableType() ? TargetType.GetCollectionElementType() : TargetType;
 		public abstract Delegate CreateDelegate(ActionType actionType);
 	}
 

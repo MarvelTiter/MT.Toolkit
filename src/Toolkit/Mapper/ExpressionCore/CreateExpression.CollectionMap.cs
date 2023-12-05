@@ -1,73 +1,143 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections.Generic;
+using System.Linq.Expressions;
 using MT.Toolkit.Mapper;
+using System;
+using System.Collections;
+using System.Diagnostics;
 
 namespace MT.KitTools.Mapper.ExpressionCore
 {
     internal partial class CreateExpression
     {
-        internal static Expression CollectionMap(MapInfo p)
+        internal static void CollectionMap(MapInfo p, List<Expression> body)
         {
-            //List<Expression> body = new List<Expression>();
-            //var source = p.SourceExpression as ParameterExpression;
 
-            //var moveNext = typeof(IEnumerator).GetMethod("MoveNext");
-            //var getEnumerator = p.SourceType.GetMethod("GetEnumerator");
-            //if (getEnumerator == null)
-            //{
-            //    getEnumerator = typeof(IEnumerable<>).MakeGenericType(p.SourceElementType).GetMethod("GetEnumerator");
-            //}
+            var moveNext = typeof(IEnumerator).GetMethod("MoveNext");
+            var getEnumerator = p.SourceType.GetMethod("GetEnumerator");
+
+
+            Type? enumeratorType;
+            if (p.SourceType.IsGenericType)
+            {
+                var innerType = p.SourceType.GetNestedType("Enumerator");
+                if (innerType != null)
+                {
+                    enumeratorType = innerType.MakeGenericType(p.SourceElementType);
+                }
+                else
+                {
+                    enumeratorType = typeof(IEnumerator<>).MakeGenericType(p.SourceElementType);
+                }
+            }
+            else if (p.SourceType.IsArray)
+            {
+                enumeratorType = typeof(IEnumerator);
+            }
+            else
+            {
+                throw new Exception("Unkonw Enumerator");
+            }
+
             /*
             * var enumerator = source.GetEnumerator();
             * var ret = new T()
             * while(true) {
-            *   if (!enumerator.MoveNext()) {
-            *     goto endLabel;   
+            *   if (enumerator.MoveNext()) {
+            *       var t = enumerator.Current;
+            *       var n = MapperLink<,>.Map(t);
+            *       ret.Add(n);
+            *       // ret.Add(MapperLink<,>.Map(enumerator.Current));
             *   }
-            *   var t = enumerator.Current;
-            *   MapperLink<,>.Map(t);
+            *   else
+            *   {
+            *       goto endLabel
+            *   }
             * }
             * endLabel:
             */
-            //LabelTarget endLabel = Expression.Label("end");
+            LabelTarget endLabel = Expression.Label("end");
+            var linkMap = typeof(MapperExtensions.MapperLink<,>).MakeGenericType(p.SourceElementType, p.TargetElementType).GetMethod("Create");
+            var listType = typeof(List<>).MakeGenericType(p.TargetElementType);
+            var templist = Expression.Variable(listType);
+            body.Add(Expression.Assign(templist, Expression.New(listType)));
+            p.Variables.Add(templist);
+            var addMethod = listType.GetMethod("Add");
 
-            //var linkMap = typeof(Mapper.MapperLink<,>).MakeGenericType(p.SourceElementType, p.TargetElementType).GetMethod("Map");
-            //var classMap = typeof(CreateExpression).GetMethod("ClassMap"
-            //    , BindingFlags.NonPublic | BindingFlags.Static
-            //    , null
-            //    , new[] { typeof(List<MappingInfo>), typeof(Type), typeof(Type), typeof(object) }
-            //    , null);
-            //var listType = typeof(List<>).MakeGenericType(p.TargetElementType);
-            //var addMethod = listType.GetMethod("Add");
-            //ParameterExpression listExpression = Expression.Variable(listType, "list");
-            //ParameterExpression temp = Expression.Variable(p.TargetElementType, "temp");
-            //body.Add(Expression.Assign(listExpression, Expression.New(listType)));
+            var enumeratorExpression = Expression.Variable(enumeratorType, "enumerator");
+            p.Variables.Add(enumeratorExpression);
+            body.Add(Expression.Assign(enumeratorExpression, Expression.Call(p.SourceExpression, getEnumerator!)));
+            var loop = Expression.Loop(Expression.Block(Expression.IfThenElse(Expression.Call(enumeratorExpression, moveNext!)
+                 , Expression.Block(Expression.Call(templist, addMethod!, Expression.Call(linkMap!, ValueExpression(enumeratorExpression, p.SourceElementType))
+                 ))
+                 , Expression.Break(endLabel)
+                 )), endLabel);
+            ;
+            body.Add(loop);
 
-            //if (p.TargetType.IsICollectionType())
-            //{
-            //    List<Expression> loopBody = new List<Expression>();
-            //    MethodCallExpression enumerator = Expression.Call(source, getEnumerator);
-            //    ConditionalExpression loopCondition = Expression.IfThen(
-            //        Expression.IsFalse(Expression.Call(enumerator, moveNext)),
-            //        Expression.Break(endLabel)
-            //        );
-            //    MemberExpression current = Expression.Property(enumerator, "Current");
-            //    var targetValue = Expression.Call(classMap
-            //        , Expression.Constant(p.Rules, typeof(List<MappingInfo>))
-            //        , Expression.Constant(p.SourceElementType, typeof(Type))
-            //        , Expression.Constant(p.TargetElementType, typeof(Type))
-            //        , current);
-            //    Expression.Assign(temp, targetValue);
-            //    var listAdd = Expression.Call(listExpression, addMethod, temp);
-            //    loopBody.Add(loopCondition);
-            //    loopBody.Add(listAdd);
-            //    var loop = Expression.Loop(Expression.Block(loopBody), endLabel);
-            //    body.Add(loop);
-            //    //body.Add(Expression.Label(endLabel));
-            //}
-            //body.Add(Expression.Convert(listExpression, p.TargetType));
-            //BlockExpression block = Expression.Block(new[] { listExpression }, body);
-            //return block;
-            return null;
+            if (p.TargetExpression == null)
+            {
+                p.TargetExpression = Expression.Variable(p.TargetType, "tar");
+                p.Variables.Add(p.TargetExpression as ParameterExpression);
+            }
+
+            if (p.ActionType == ActionType.NewObj)
+            {
+                if (p.TargetType.IsArray)
+                {
+                    var toArray = listType.GetMethod("ToArray")!;
+                    body.Add(Expression.Assign(p.TargetExpression, Expression.Call(templist, toArray)));
+                }
+                else
+                {
+                    body.Add(Expression.Assign(p.TargetExpression, templist));
+                    body.Add(Expression.Convert(p.TargetExpression, p.TargetType));
+                }
+            }
+
+
+            Expression ValueExpression(Expression enumerator, Type targetType)
+            {
+                var current = Expression.Property(enumerator, nameof(IEnumerator.Current));
+                return Expression.Convert(current, targetType);
+            }
+
+        }
+
+        //private static void CreateArray(MapInfo p, List<Expression> body)
+        //{
+        //    if (p.TargetExpression == null)
+        //    {
+        //        p.TargetExpression = Expression.Variable(p.TargetType, "tar");
+        //        body.Add(Expression.Assign(p.TargetExpression, Expression.NewArrayInit(p.SourceElementType)));
+        //        p.Variables.Add(p.TargetExpression as ParameterExpression);
+        //    }
+        //    /*
+        //     * var length = source.Length;
+        //     * var ret = new T[length];
+        //     * while(true)
+        //     * {
+        //     *     if (
+        //     * }
+        //     */
+        //    var linkMap = typeof(MapperExtensions.MapperLink<,>).MakeGenericType(p.SourceElementType, p.TargetElementType).GetMethod("Create");
+
+        //    var index = Expression.Variable(typeof(int));
+        //    p.Variables.Add(index);
+        //    var length = Expression.Property(p.SourceExpression, nameof(Array.Length));
+        //    var breakLabel = Expression.Label();
+        //    Expression.Loop(Expression.Block(
+        //        Expression.IfThenElse(
+        //            Expression.LessThan(index, length),
+        //      Expression.Block(Expression.arr
+        //          ,Expression.PostIncrementAssign(index)),
+        //      Expression.Break(breakLabel)
+        //            )
+        //        ), breakLabel);
+        //}
+
+        private static void CreateList(MapInfo p, List<Expression> body)
+        {
+
         }
     }
 }

@@ -40,7 +40,7 @@ namespace MT.Toolkit.Mapper
 		{
 			Type genericType = typeof(MapperRule<,>).MakeGenericType(sourceType, targetType);
 			var exp = Expression.New(genericType);
-			return (IMapperRule)Expression.Lambda(exp).Compile().DynamicInvoke();
+			return (IMapperRule)Expression.Lambda(exp).Compile().DynamicInvoke()!;
 		}
 	}
 }

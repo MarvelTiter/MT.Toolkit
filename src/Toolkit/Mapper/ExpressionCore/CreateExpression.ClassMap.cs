@@ -14,7 +14,7 @@ namespace MT.KitTools.Mapper.ExpressionCore
         internal static void ClassMap(MapInfo p, List<Expression> body)
         {
             Type targetType = p.TargetType;
-            var rules = p.MapRule?.Maps;
+            var rules = p.MapRule.Maps;
             if (p.TargetExpression == null)
             {
                 p.TargetExpression = Expression.Variable(targetType, "tar");
@@ -31,7 +31,7 @@ namespace MT.KitTools.Mapper.ExpressionCore
 
             if (p.MapRule.MapPostAction != null)
             {
-                var dyInvoke = typeof(Delegate).GetMethod("DynamicInvoke", new[] { typeof(object[]) });
+                var dyInvoke = typeof(Delegate).GetMethod("DynamicInvoke", new[] { typeof(object[]) })!;
                 var actionExp = Expression.Constant(p.MapRule.MapPostAction, typeof(Delegate));
 
                 MethodCallExpression postExp = Expression.Call(actionExp, dyInvoke, Expression.NewArrayInit(typeof(object), p.SourceExpression, p.TargetExpression));

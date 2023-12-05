@@ -26,7 +26,7 @@ namespace MT.Toolkit.Mapper
 	{
 		public Type SourceType { get; set; }
 		public Type TargetType { get; set; }
-		public Delegate MapPostAction { get; set; }
+		public Delegate? MapPostAction { get; set; }
 		public List<MappingInfo> Maps { get; set; }
 		private MapperConfig Config => MapperConfigProvider.GetMapperConfig();
 		public MapperRule()
@@ -58,7 +58,7 @@ namespace MT.Toolkit.Mapper
 					AddMap(tar, source);
 			}
 		}
-		private void AddMap(PropertyInfo to, PropertyInfo from, string formatter = null)
+		private void AddMap(PropertyInfo to, PropertyInfo from, string? formatter = null)
 		{
 			MappingInfo rule = new MappingInfo(to, from, formatter);
 			Maps.Add(rule);
@@ -67,14 +67,14 @@ namespace MT.Toolkit.Mapper
 
 	public class MappingInfo
 	{
-		public MappingInfo(PropertyInfo mapTo, PropertyInfo mapFrom, string formatter)
+		public MappingInfo(PropertyInfo mapTo, PropertyInfo mapFrom, string? formatter)
 		{
 			MapTo = mapTo;
 			MapFrom = mapFrom;
 			Formatter = formatter;
 		}
 		public int Index { get; set; }
-		public string Formatter { get; set; }
+		public string? Formatter { get; set; }
 		public PropertyInfo MapTo { get; set; }
 		public PropertyInfo MapFrom { get; set; }
 	}

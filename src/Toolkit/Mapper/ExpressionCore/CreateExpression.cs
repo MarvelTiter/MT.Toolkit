@@ -27,9 +27,9 @@ namespace MT.KitTools.Mapper.ExpressionCore
                 p.Variables.Add(p.SourceExpression as ParameterExpression);
             }
             else if (p.ActionType == ActionType.Ref)
-            {               
+            {
                 p.TargetExpression = Expression.Parameter(p.TargetType, "tar");
-                p.SourceExpression = Expression.Parameter(p.SourceType, "from");                
+                p.SourceExpression = Expression.Parameter(p.SourceType, "from");
                 p.Parameters.Add(p.SourceExpression as ParameterExpression);
                 p.Parameters.Add(p.TargetExpression as ParameterExpression);
             }
@@ -50,27 +50,12 @@ namespace MT.KitTools.Mapper.ExpressionCore
                 return MapFromDictionary;
             else if (targetType.IsDictionary())
                 return MapToDictionary;
+            else if ((sourceType.IsICollectionType() || sourceType.IsIEnumerableType()) && (targetType.IsICollectionType()|| targetType.IsIEnumerableType()))
+                return CollectionMap;
             else if (sourceType.IsClass && targetType.IsClass)
                 return ClassMap;
-            //else if (sourceType.IsICollectionType() && targetType.IsICollectionType())
-            //    return CollectionMap;
             throw new NotImplementedException($"not implement map between {sourceType.Name} and {targetType.Name}");
         }
-
-        //internal static Action<MapInfo, List<Expression>> GetHandler2(MapInfo p)
-        //{
-        //    var sourceType = p.SourceType;
-        //    var targetType = p.TargetType;
-        //    if (sourceType.IsDictionary())
-        //        return MapFromDictionary;
-        //    else if (targetType.IsDictionary())
-        //        return MapToDictionary;
-        //    else if (sourceType.IsClass && targetType.IsClass)
-        //        return ClassMap;
-        //    else if (sourceType.IsICollectionType() && targetType.IsICollectionType())
-        //        return CollectionMap;
-        //    throw new NotImplementedException($"not implement map between {sourceType.Name} and {targetType.Name}");
-        //}
     }
 
 }
