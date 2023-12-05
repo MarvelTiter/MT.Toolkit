@@ -14,10 +14,10 @@ namespace MapperTest
             {
                 P1 = Random.Shared.Next(0, 100);
                 P4 = DateTime.Now;
-                P2 = P1.ToString();
+                P2 = P1?.ToString() ?? "Error";
                 P3 = P1 > 50;
             }
-            public int P1 { get; set; }
+            public int? P1 { get; set; }
             public string P2 { get; set; }
             public bool P3 { get; set; }
             public DateTime P4 { get; set; }
@@ -28,14 +28,14 @@ namespace MapperTest
         {
             var d = DateTime.Now;
             var source = new ExpandoObject();
-            source.TryAdd("P1", "1");
+            source.TryAdd("P1", "");
             source.TryAdd("P2", "hello");
             source.TryAdd("P3", "true");
             source.TryAdd("P4", d.ToString("yyyy-MM-dd HH:mm:ss"));
 
             var ret = Mapper.Map<IDictionary<string, object?>, CModel>(source);
 
-            Assert.IsTrue(ret.P1 == 1);
+            Assert.IsTrue(!ret.P1.HasValue);
             Assert.IsTrue(ret.P2 == "hello");
             Assert.IsTrue(ret.P3 == true);
             Assert.IsTrue(ret.P4.ToString() == d.ToString());
@@ -73,7 +73,7 @@ namespace MapperTest
         public void MapperCollection_ListToIEnumerator()
         {
             var list = new List<CModel>() { new(), new() };
-            var nlist = Mapper.Map<List<CModel>,IEnumerable<CModel>>(list);
+            var nlist = Mapper.Map<List<CModel>, IEnumerable<CModel>>(list);
             var i = 0;
             foreach (var item in nlist)
             {
