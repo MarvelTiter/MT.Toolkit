@@ -119,7 +119,7 @@ namespace MT.Toolkit.HttpHelper
 
         public dynamic? ReadReturnValue() => ReadReturnValue<object>();
 
-        public T? ReadParameterReturnValue<T>(string? name)
+        public T? ReadParameterReturnValue<T>(string? name = null)
         {
             var outParams = xml?.XPathSelectElement($"r:{methodName}Result", nsManager)?.ElementsAfterSelf();
             XElement? outParam = outParams?.FirstOrDefault(x=>
@@ -138,6 +138,18 @@ namespace MT.Toolkit.HttpHelper
                 return (T?)ret;
             }
             return outParam.AsDynamic();
+        }
+
+        public XElement? ReadParameterReturnValueAsXml(string? name = null)
+        {
+            var outParams = xml?.XPathSelectElement($"r:{methodName}Result", nsManager)?.ElementsAfterSelf();
+            XElement? outParam = outParams?.FirstOrDefault(x =>
+            {
+                if (string.IsNullOrEmpty(name)) return true;
+                return x.Name == name;
+            });
+            if (outParam == null) return default;
+            return outParam;
         }
 
         public dynamic? ReadParameterReturnValue(string? name = null) => ReadParameterReturnValue<object>(name);
