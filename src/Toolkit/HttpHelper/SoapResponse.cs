@@ -121,12 +121,7 @@ namespace MT.Toolkit.HttpHelper
 
         public T? ReadParameterReturnValue<T>(string? name = null)
         {
-            var outParams = xml?.XPathSelectElement($"r:{methodName}Result", nsManager)?.ElementsAfterSelf();
-            XElement? outParam = outParams?.FirstOrDefault(x=>
-            {
-                if (string.IsNullOrEmpty(name)) return true;
-                return x.Name == name;
-            });
+            var outParam = ReadParameterReturnValueAsXml(name);
             if (outParam == null) return default;
             var type = typeof(T);
             if (type != typeof(object))
