@@ -11,7 +11,7 @@ namespace MT.Toolkit.LogTool
 		{
 			[SimpleLogLevel.Trace] = LogType.Console,
 			[SimpleLogLevel.Information] = LogType.Console,
-			[SimpleLogLevel.Warning] = LogType.Console,
+			[SimpleLogLevel.Warning] = LogType.Console | LogType.File,
 			[SimpleLogLevel.Debug] = LogType.Console | LogType.File | LogType.Debug,
 			[SimpleLogLevel.Error] = LogType.Console | LogType.File,
 			[SimpleLogLevel.Critical] = LogType.Console | LogType.File,
