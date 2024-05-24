@@ -12,12 +12,7 @@ namespace MT.Toolkit.HttpHelper
             var serviceManager = new SoapServiceManager();
             manager.Invoke(serviceManager);
             services.AddSingleton<ISoapServiceManager>(serviceManager);
-            services.AddSingleton<ISoapServiceFactory>(provider =>
-            {
-                var m = provider.GetService<ISoapServiceManager>()!;
-                var soap = new SoapServiceProvider(provider, m);
-                return soap;
-            });
+            services.AddSingleton<ISoapServiceFactory, SoapServiceProvider>();
             return services;
         }
 

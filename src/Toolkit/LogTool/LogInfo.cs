@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 
 namespace MT.Toolkit.LogTool
 {
@@ -15,7 +16,7 @@ namespace MT.Toolkit.LogTool
 		/// <summary>
 		/// 日志级别
 		/// </summary>
-		public SimpleLogLevel LogLevel { get; set; }
+		public LogLevel LogLevel { get; set; }
 		/// <summary>
 		/// 异常信息
 		/// </summary>
@@ -24,9 +25,9 @@ namespace MT.Toolkit.LogTool
 		/// <summary>
 		/// 异常对象
 		/// </summary>
-		public Exception Exception { get; set; }
+		public Exception? Exception { get; set; }
 		public int EventId { get; set; }
-		public string EventName { get; set; }
+		public string? EventName { get; set; }
 		public string Category { get; set; }
 
 		public object State { get; set; }

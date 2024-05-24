@@ -1,8 +1,4 @@
-﻿
-
-
-#if NET6_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 namespace MT.Toolkit.HttpHelper
 {
@@ -14,4 +10,3 @@ namespace MT.Toolkit.HttpHelper
         ISoapServiceManager AddSoapService(string key, Action<SoapServiceConfiguration> config);
     }
 }
-#endif

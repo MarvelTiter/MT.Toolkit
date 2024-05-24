@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 
 namespace MT.Toolkit.LogTool
@@ -7,26 +8,26 @@ namespace MT.Toolkit.LogTool
 	{
 		public string LogDirectory { get; set; }
 
-		public Dictionary<SimpleLogLevel, LogType> LogTarget { get; set; } = new Dictionary<SimpleLogLevel, LogType>
+		public Dictionary<LogLevel, LogType> LogTarget { get; set; } = new Dictionary<LogLevel, LogType>
 		{
-			[SimpleLogLevel.Trace] = LogType.Console,
-			[SimpleLogLevel.Information] = LogType.Console,
-			[SimpleLogLevel.Warning] = LogType.Console | LogType.File,
-			[SimpleLogLevel.Debug] = LogType.Console | LogType.File | LogType.Debug,
-			[SimpleLogLevel.Error] = LogType.Console | LogType.File,
-			[SimpleLogLevel.Critical] = LogType.Console | LogType.File,
-			[SimpleLogLevel.None] = LogType.Console,
+			[LogLevel.Trace] = LogType.Console,
+			[LogLevel.Information] = LogType.Console,
+			[LogLevel.Warning] = LogType.Console | LogType.File,
+			[LogLevel.Debug] = LogType.Console | LogType.File | LogType.Debug,
+			[LogLevel.Error] = LogType.Console | LogType.File,
+			[LogLevel.Critical] = LogType.Console | LogType.File,
+			[LogLevel.None] = LogType.Console,
 		};
 
-		public Dictionary<SimpleLogLevel, ConsoleColor> ConsoleColor { get; set; } = new Dictionary<SimpleLogLevel, ConsoleColor>
+		public Dictionary<LogLevel, ConsoleColor> ConsoleColor { get; set; } = new Dictionary<LogLevel, ConsoleColor>
 		{
-			[SimpleLogLevel.Information] = System.ConsoleColor.Green,
-			[SimpleLogLevel.Trace] = System.ConsoleColor.DarkBlue,
-			[SimpleLogLevel.Warning] = System.ConsoleColor.Yellow,
-			[SimpleLogLevel.Debug] = System.ConsoleColor.DarkBlue,
-			[SimpleLogLevel.Error] = System.ConsoleColor.Red,
-			[SimpleLogLevel.Critical] = System.ConsoleColor.Red,
-			[SimpleLogLevel.None] = System.ConsoleColor.Gray,
+			[LogLevel.Information] = System.ConsoleColor.Green,
+			[LogLevel.Trace] = System.ConsoleColor.DarkBlue,
+			[LogLevel.Warning] = System.ConsoleColor.Yellow,
+			[LogLevel.Debug] = System.ConsoleColor.DarkBlue,
+			[LogLevel.Error] = System.ConsoleColor.Red,
+			[LogLevel.Critical] = System.ConsoleColor.Red,
+			[LogLevel.None] = System.ConsoleColor.Gray,
 		};
 
 		public Action<LogInfo> LogActionIntercept { get; set; }
@@ -47,7 +48,7 @@ namespace MT.Toolkit.LogTool
 			EnabledLogType = EnabledLogType | LogType.Custom;
 		}
 
-		public void RedirectLogTarget(SimpleLogLevel logLevel, LogType logType)
+		public void RedirectLogTarget(LogLevel logLevel, LogType logType)
 		{
 			LogTarget[logLevel] = logType;
 		}

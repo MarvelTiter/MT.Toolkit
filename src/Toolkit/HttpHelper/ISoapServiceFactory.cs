@@ -1,5 +1,4 @@
-﻿#if NET6_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-namespace MT.Toolkit.HttpHelper
+﻿namespace MT.Toolkit.HttpHelper
 {
     public interface ISoapServiceFactory
     {
@@ -7,4 +6,3 @@ namespace MT.Toolkit.HttpHelper
         ISoapService GetSoapService(string key);
     }
 }
-#endif

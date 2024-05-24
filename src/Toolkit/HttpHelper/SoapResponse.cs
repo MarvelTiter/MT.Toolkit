@@ -1,5 +1,4 @@
-﻿#if NET6_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
@@ -41,7 +40,12 @@ namespace MT.Toolkit.HttpHelper
             foreach (var item in values)
             {
                 var v = item.Value.Count > 1 ? item.Value : item.Value[0];
+#if NET40_OR_GREATER
+                var d = ret as IDictionary<string, object>;
+                d.Add(item.Key, v);
+#else
                 ret.TryAdd(item.Key, v);
+#endif
             }
 
             return ret;
@@ -201,4 +205,3 @@ namespace MT.Toolkit.HttpHelper
         }
     }
 }
-#endif

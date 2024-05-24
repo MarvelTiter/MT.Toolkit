@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace MT.Toolkit.LogTool
@@ -25,7 +26,7 @@ namespace MT.Toolkit.LogTool
 			Exception ex = null)
 		{
 			CheckLoggerConfig();
-			logger.Log(SimpleLogLevel.Information, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
+			logger.Log(LogLevel.Information, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
 		}
 
 		public static void LogDebug(string msg,
@@ -35,7 +36,7 @@ namespace MT.Toolkit.LogTool
 			Exception ex = null)
 		{
 			CheckLoggerConfig();
-			logger.Log(SimpleLogLevel.Debug, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
+			logger.Log(LogLevel.Debug, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
 		}
 
 		public static void LogError(string msg,
@@ -45,7 +46,7 @@ namespace MT.Toolkit.LogTool
 			Exception ex = null)
 		{
 			CheckLoggerConfig();
-			logger.Log(SimpleLogLevel.Error, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
+			logger.Log(LogLevel.Error, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
 		}
 	}
 }

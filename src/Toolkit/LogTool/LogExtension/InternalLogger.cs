@@ -24,7 +24,7 @@ namespace MT.Toolkit.LogTool.LogExtension
 
 		public bool IsEnabled(LogLevel logLevel)
 		{
-			return logger.IsEnabled(Enum.Parse<SimpleLogLevel>(logLevel.ToString()));
+			return logger.IsEnabled(logLevel);
 		}
 
 		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
@@ -33,7 +33,7 @@ namespace MT.Toolkit.LogTool.LogExtension
 			{
 				return;
 			}
-			logger.Log(Enum.Parse<SimpleLogLevel>(logLevel.ToString()), state, formatter, name, eventId.Id, eventId.Name, exception);
+			logger.Log(logLevel, state, formatter, name, eventId.Id, eventId.Name, exception);
 		}
 
 		internal sealed class NullScope : IDisposable

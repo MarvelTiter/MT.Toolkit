@@ -8,7 +8,7 @@ namespace MT.Toolkit.DataTableExtension
 {
 	public static class DataTableBuilder<T>
 	{
-		private static Func<DataRow, object> func;
+		private static Func<DataRow, object>? func;
 
 		public static Func<DataRow, object> Build(DataColumnCollection dataColumn, bool mapAll)
 		{
@@ -30,7 +30,7 @@ namespace MT.Toolkit.DataTableExtension
 				{
 					if (cols.Contains(field.Name))
 					{
-						DataColumn col = cols[field.Name];
+						DataColumn col = cols[field.Name]!;
 						var valueExp = TableExpressionBase.GetTargetValueExpression(col, rowExp, field.FieldType);
 						MemberAssignment memberAssignment = Expression.Bind(field, valueExp);
 						bindings.Add(memberAssignment);
@@ -53,7 +53,7 @@ namespace MT.Toolkit.DataTableExtension
 					if (cols.Contains(prop.Name))
 					{
 						if (!prop.CanWrite) return;
-						DataColumn col = cols[prop.Name];
+						DataColumn col = cols[prop.Name]!;
 						var valueExp = TableExpressionBase.GetTargetValueExpression(col, rowExp, prop.PropertyType);
 						MemberAssignment memberAssignment = Expression.Bind(prop, valueExp);
 						bindings.Add(memberAssignment);

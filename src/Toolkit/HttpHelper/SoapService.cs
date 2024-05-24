@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO;
 using System.Xml.Linq;
-using System.Data.SqlTypes;
+using System.Diagnostics;
 
-
-
-#if NET6_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Xml;
 using System.Xml.XPath;
@@ -18,7 +13,10 @@ namespace MT.Toolkit.HttpHelper
 {
     public class SoapService : ISoapService
     {
-        private readonly HttpClient client;
+        private readonly IHttpClientFactory clientFactory;
+        private readonly SoapServiceConfiguration? configuration;
+        private readonly ILogger<SoapService>? logger;
+        private readonly IServiceProvider services;
         private readonly string url;
         private readonly SoapVersion version;
         private readonly string requestNamespace;
@@ -64,39 +62,58 @@ namespace MT.Toolkit.HttpHelper
             }
         }
 
-        public SoapService(HttpClient client, SoapServiceConfiguration configuration)
+        public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration, ILogger<SoapService> logger, IServiceProvider services)
         {
-            this.client = client;
+            this.clientFactory = clientFactory;
+            this.configuration = configuration;
+            this.logger = logger;
+            this.services = services;
             this.url = configuration.Url ?? throw new ArgumentNullException();
             this.version = configuration.Version ?? SoapVersion.Soap11;
             this.requestNamespace = configuration.RequestNamespace ?? "http://tempuri.org/";
             this.responseNamespace = configuration.ResponseNamespace ?? "http://tempuri.org/";
         }
 
-        public SoapService(HttpClient client, string url) : this(client, url, SoapVersion.Soap11, "http://tempuri.org/")
+        public SoapService(IHttpClientFactory clientFactory, string url) : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/")
         {
 
         }
 
-        public SoapService(HttpClient client, string url, string @namespace) : this(client, url, SoapVersion.Soap11, @namespace)
+        public SoapService(IHttpClientFactory clientFactory, string url, string @namespace) : this(clientFactory, url, SoapVersion.Soap11, @namespace)
         {
 
         }
 
-        public SoapService(HttpClient client, string url, SoapVersion version, string @namespace) : this(client, url, version, @namespace, @namespace)
+        public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string @namespace) : this(clientFactory, url, version, @namespace, @namespace)
         {
 
         }
 
-        public SoapService(HttpClient client, string url, SoapVersion version, string requestNamespace, string responseNamespace)
+        public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string requestNamespace, string responseNamespace)
         {
-            this.client = client;
+            this.clientFactory = clientFactory;
             this.url = url;
             this.version = version;
             this.requestNamespace = requestNamespace.EndsWith('/') ? requestNamespace : requestNamespace + '/';
             this.responseNamespace = responseNamespace.EndsWith('/') ? requestNamespace : requestNamespace + '/';
         }
-        public async Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null)
+
+        private HttpClient GetClient(string methodName)
+        {
+            if (configuration?.ClientProvider == null)
+            {
+                return clientFactory.CreateClient();
+            }
+            return configuration.ClientProvider.Invoke(new ProviderContext(clientFactory, services, methodName));
+        }
+
+        public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null)
+        {
+            var client = GetClient(methodName);
+            return SendAsync(client, methodName, args);
+        }
+
+        public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null)
         {
             StringBuilder contentString = new StringBuilder();
             if (args != null)
@@ -118,11 +135,13 @@ namespace MT.Toolkit.HttpHelper
                 client.DefaultRequestHeaders.Remove("SOAPAction");
                 client.DefaultRequestHeaders.Add("SOAPAction", $"{requestNamespace}{methodName}");
             }
-            HttpContent  httpContent = new StringContent(content, Encoding.UTF8, HttpContentType);
+            HttpContent httpContent = new StringContent(content, Encoding.UTF8, HttpContentType);
             try
             {
-                HttpResponseMessage response = await client.PostAsync(url, httpContent);
-
+                Stopwatch sw = Stopwatch.StartNew();
+                HttpResponseMessage response = await client.PostAsync(url, httpContent).ConfigureAwait(false);
+                sw.Stop();
+                logger?.LogError($"SOAP Action: {methodName}, Elapsed {sw.ElapsedMilliseconds} ms");
                 // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
                 var result = await response.Content.ReadAsStreamAsync();
                 var rawContent = await response.Content.ReadAsStringAsync();
@@ -145,8 +164,35 @@ namespace MT.Toolkit.HttpHelper
             {
                 return new SoapResponse(ex);
             }
-
         }
+
+        //private async Task<Stream> UseWebRequest(string content, out string rawContent)
+        //{
+        //    //发起请求
+        //    WebRequest webRequest = WebRequest.Create(url);
+        //    webRequest.ContentType = "text/xml; charset=utf-8";
+        //    webRequest.Method = "POST";
+        //    using (Stream requestStream = webRequest.GetRequestStream())
+        //    {
+        //        byte[] paramBytes = Encoding.UTF8.GetBytes(content);
+        //        requestStream.Write(paramBytes, 0, paramBytes.Length);
+        //    }
+        //    //响应
+        //    try
+        //    {
+        //        WebResponse webResponse = webRequest.GetResponse();
+        //        var stream = webResponse.GetResponseStream();
+        //        using var stringReader = new StreamReader(stream, Encoding.UTF8);
+        //        rawContent = await stringReader.ReadToEndAsync();
+        //        stream.Seek(0, SeekOrigin.Begin);
+        //        return stream;
+        //    }
+        //    catch (WebException ex)
+        //    {
+        //        rawContent = new StreamReader(ex.Response.GetResponseStream()).ReadToEnd();
+        //        return null;
+        //    }
+        //}
 
         //protected virtual void Dispose(bool disposing)
         //{
@@ -167,4 +213,3 @@ namespace MT.Toolkit.HttpHelper
         //}
     }
 }
-#endif

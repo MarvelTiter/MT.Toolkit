@@ -21,7 +21,7 @@ namespace MT.Toolkit.StringExtension
 			return string.Empty;
 		}
 
-		public static bool IsEnable(this string self, Func<string, bool> rule = null)
+		public static bool IsEnable(this string self, Func<string, bool>? rule = null)
 		{
 			if (string.IsNullOrEmpty(self))
 			{

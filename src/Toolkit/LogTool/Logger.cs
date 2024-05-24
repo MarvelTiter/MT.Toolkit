@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 
 namespace MT.Toolkit.LogTool
@@ -26,7 +27,7 @@ namespace MT.Toolkit.LogTool
 			}
 			if (logType.HasFlag(LogType.File))
 			{
-				LoggerDict[LogType.File] = FileLogger.Instance;
+				LoggerDict[LogType.File] = LocalFileLogger.Instance;
 			}
 			if (logType.HasFlag(LogType.Custom))
 			{
@@ -34,12 +35,12 @@ namespace MT.Toolkit.LogTool
 			}
 		}
 
-		public bool IsEnabled(SimpleLogLevel logLevel)
+		public bool IsEnabled(LogLevel logLevel)
 		{
 			return true;
 		}
 
-		public void Log<TState>(SimpleLogLevel logLevel, TState state, Func<TState, Exception, string> formatter, string category = "", int eventId = 0, string eventName = "", Exception exception = null)
+		public void Log<TState>(LogLevel logLevel, TState state, Func<TState, Exception, string> formatter, string category = "", int eventId = 0, string eventName = "", Exception exception = null)
 		{
 			var logInfo = new LogInfo<TState>()
 			{
@@ -54,7 +55,7 @@ namespace MT.Toolkit.LogTool
 		}
 
 		object locker = new object();
-		public void Write<T>(SimpleLogLevel level, LogInfo logInfo)
+		public void Write<T>(LogLevel level, LogInfo logInfo)
 		{
 			lock (locker)
 			{
