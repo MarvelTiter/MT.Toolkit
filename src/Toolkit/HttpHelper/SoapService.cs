@@ -16,7 +16,7 @@ namespace MT.Toolkit.HttpHelper
         private readonly IHttpClientFactory clientFactory;
         private readonly SoapServiceConfiguration? configuration;
         private readonly ILogger<SoapService>? logger;
-        private readonly IServiceProvider services;
+        private readonly IServiceProvider? services;
         private readonly string url;
         private readonly SoapVersion version;
         private readonly string requestNamespace;

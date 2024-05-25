@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MT.Toolkit.XmlHelper;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
@@ -11,60 +12,6 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 namespace MT.Toolkit.HttpHelper
 {
-    public static class XElementExtensions
-    {
-        public static dynamic AsDynamic(this XElement root)
-        {
-            var ret = new ExpandoObject();
-            var values = new Dictionary<string, List<object>>();
-            foreach (var p in root.Elements())
-            {
-                var key = p.Name.LocalName;
-                object? val;
-                if (p.Elements().Count() > 0)
-                {
-                    val = AsDynamic(p);
-                }
-                else
-                {
-                    val = p.Value;
-                }
-                if (!values.TryGetValue(key, out var list))
-                {
-                    list = new List<object>();
-                    values[key] = list;
-                }
-                list.Add(val);
-            }
-
-            foreach (var item in values)
-            {
-                var v = item.Value.Count > 1 ? item.Value : item.Value[0];
-#if NET40_OR_GREATER
-                var d = ret as IDictionary<string, object>;
-                d.Add(item.Key, v);
-#else
-                ret.TryAdd(item.Key, v);
-#endif
-            }
-
-            return ret;
-        }
-
-        public static string? GetValue(this XElement? element, string path, XmlNamespaceManager? nsManager = null)
-        {
-            return element?.XPathSelectElement(path, nsManager)?.Value;
-        }
-        public static T? GetValue<T>(this XElement? element, string path, XmlNamespaceManager? nsManager = null) where T : struct
-        {
-            var str = GetValue(element, path, nsManager);
-            if (string.IsNullOrEmpty(str)) return default;
-            var ret = Convert.ChangeType(str, typeof(T));
-            if (ret == null) return default;
-            return (T?)ret;
-        }
-    }
-
     public sealed class SoapResponse
     {
         /// <summary>
@@ -75,25 +22,17 @@ namespace MT.Toolkit.HttpHelper
         /// 请求发生异常或解析返回数据时发生异常的异常信息
         /// </summary>
         public string? Message { get; set; }
-        private readonly string? rawValue;
+        private readonly XmlString? xmlString;
         private readonly string? responseContent;
         private XmlNamespaceManager? nsManager;
         private readonly string? methodName;
 
-        //private XmlReader? xmlReader;
         internal SoapResponse(string? responseContent, string? rawValue, XmlNamespaceManager manager, string? methodName)
         {
             this.responseContent = responseContent;
-            this.rawValue = rawValue;
+            xmlString = rawValue;
             nsManager = manager;
             this.methodName = methodName;
-
-            if (rawValue != null)
-            {
-                using var reader = new StringReader(rawValue);
-                using var xmlReader = XmlReader.Create(reader);
-                xml = XElement.Load(xmlReader);
-            }
         }
 
         internal SoapResponse(Exception ex)
@@ -102,16 +41,14 @@ namespace MT.Toolkit.HttpHelper
             Message = ex.Message;
         }
         public string? RawContent => responseContent;
-        public string? RawValue => rawValue;
-
-        private XElement? xml;
+        public string? RawValue => xmlString?.Value;
 
         public T? ReadReturnValue<T>()
         {
             var type = typeof(T);
             if (type != typeof(object))
             {
-                var str = xml?.GetValue($"//r:{methodName}Result", nsManager);
+                var str = xmlString?.GetValue($"//r:{methodName}Result", nsManager);
                 if (string.IsNullOrEmpty(str)) return default;
                 var ret = Convert.ChangeType(str, typeof(T));
                 if (ret == null) return default;
@@ -141,7 +78,7 @@ namespace MT.Toolkit.HttpHelper
 
         public XElement? ReadParameterReturnValueAsXml(string? name = null)
         {
-            var outParams = xml?.XPathSelectElement($"r:{methodName}Result", nsManager)?.ElementsAfterSelf();
+            var outParams = xmlString?.GetElementsAfterSelf($"r:{methodName}Result", nsManager);
             XElement? outParam = outParams?.FirstOrDefault(x =>
             {
                 if (string.IsNullOrEmpty(name)) return true;
@@ -179,14 +116,14 @@ namespace MT.Toolkit.HttpHelper
         /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
-        public string? GetValue(string expression) => xml?.GetValue(expression, nsManager);
+        public string? GetValue(string expression) => xmlString?.GetValue(expression, nsManager);
 
         /// <summary>
         /// 从接口响应的Xml中获取数据，需要加上前缀 <b>r</b>
         /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
-        private XElement? GetNode(string expression) => xml?.XPathSelectElement(expression, nsManager);
+        private XElement? GetNode(string expression) => xmlString?.GetElement(expression, nsManager);
 
         /// <summary>
         /// 从接口响应的Xml中获取数据，需要加上前缀 <b>r</b>
@@ -201,7 +138,7 @@ namespace MT.Toolkit.HttpHelper
             //var ret = Convert.ChangeType(str, typeof(T));
             //if (ret == null) return default;
             //return (T?)ret;
-            return xml?.GetValue<T>(expression, nsManager);
+            return xmlString?.GetValue<T>(expression, nsManager);
         }
     }
 }

@@ -21,17 +21,18 @@ namespace MT.Toolkit.LogTool
         public SimpleLoggerConfiguration? LogConfig { get; set; }
 
         static readonly ConcurrentQueue<LogItem> logQueue = new ConcurrentQueue<LogItem>();
-        private AutoResetEvent Pause => new AutoResetEvent(false);
+
         private string separator = "----------------------------------------------------------------------------------------------------------------------";
         CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
         private LocalFileLogger()
         {
+            var token = CancellationTokenSource.Token;
             var writeTask = new Task(obj =>
             {
-                while (true)
+                while (!token.IsCancellationRequested)
                 {
                     // 阻塞1秒
-                    Pause.WaitOne(1000, true);
+                    token.WaitHandle.WaitOne(TimeSpan.FromSeconds(1));
                     List<string[]> temp = new List<string[]>();
                     foreach (var logItem in logQueue)
                     {
@@ -60,7 +61,7 @@ namespace MT.Toolkit.LogTool
                         WriteText(item[0], item[1]);
                     }
                 }
-            }, null, CancellationTokenSource.Token, TaskCreationOptions.LongRunning);
+            }, null, token, TaskCreationOptions.LongRunning);
             writeTask.Start();
         }
 
@@ -68,7 +69,7 @@ namespace MT.Toolkit.LogTool
         {
             logQueue.Enqueue(new LogItem
             {
-                Path = LocalFileLogger.GetLogPath(),
+                Path = GetLogPath(),
                 Content = logInfo.FormatLogMessage()
             });
         }

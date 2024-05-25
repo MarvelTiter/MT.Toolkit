@@ -12,23 +12,13 @@ using System.Xml.Serialization;
 using System.Data;
 using System.Runtime.InteropServices;
 using System.Xml.XPath;
+using MT.Toolkit.XmlHelper;
 
 namespace WebServiceTest
 {
     public class UnitTest1
     {
-        [Fact]
-        public async void Test1()
-        {
-            var client = new HttpClient();
-            var ws = new SoapService(client, "", "");
-            var response = await ws.SendAsync("Login", new()
-            {
-                ["szUser"] = "admin",
-                ["szPass"] = "admin123"
-            });
-        }
-
+      
         [Fact]
         public async void ServiceCollectionTest()
         {
