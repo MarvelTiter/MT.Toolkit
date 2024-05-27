@@ -118,15 +118,5 @@ namespace MT.Toolkit.ReflectionExtension
             //TODO Member Access
             throw new NotImplementedException();
         }
-
-        public static T Parse<T>(this object self)
-        {
-            if (self is null)
-            {
-                return default;
-            }
-            var type = typeof(T).GetEnumUnderlyingType() ?? typeof(T);
-            return (T)Convert.ChangeType(self, type);
-        }
     }
 }

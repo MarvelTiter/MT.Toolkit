@@ -64,5 +64,10 @@ namespace MT.Toolkit.XmlHelper
         {
             return element?.XPathSelectElement(path, nsManager)?.ElementsAfterSelf() ?? [];
         }
+
+        public static IEnumerable<XElement> GetChildElements(this XElement? element, string path, XmlNamespaceManager? nsManager = null)
+        {
+            return element?.XPathSelectElement(path, nsManager)?.Elements() ?? [];
+        }
     }
 }
