@@ -138,10 +138,10 @@ namespace MT.Toolkit.HttpHelper
             HttpContent httpContent = new StringContent(content, Encoding.UTF8, HttpContentType);
             try
             {
-                Stopwatch sw = Stopwatch.StartNew();
+                //Stopwatch sw = Stopwatch.StartNew();
+                //sw.Stop();
+                //logger?.LogError($"SOAP Action: {methodName}, Elapsed {sw.ElapsedMilliseconds} ms");
                 HttpResponseMessage response = await client.PostAsync(url, httpContent).ConfigureAwait(false);
-                sw.Stop();
-                logger?.LogError($"SOAP Action: {methodName}, Elapsed {sw.ElapsedMilliseconds} ms");
                 // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
                 var result = await response.Content.ReadAsStreamAsync();
                 var rawContent = await response.Content.ReadAsStringAsync();
