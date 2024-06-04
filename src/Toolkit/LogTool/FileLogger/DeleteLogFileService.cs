@@ -33,17 +33,24 @@ namespace MT.Toolkit.LogTool.FileLogger
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                 }
-                var files = Directory.EnumerateFiles(logPath);
-                var deadline = DateTime.Now.AddDays(-1 * savedDays.Value);
-                foreach (var file in files)
+                try
                 {
-                    var fileinfo = new FileInfo(file);
-                    if (fileinfo.CreationTime < deadline)
+                    var files = Directory.EnumerateFiles(logPath);
+                    var deadline = DateTime.Now.AddDays(-1 * savedDays.Value);
+                    foreach (var file in files)
                     {
-                        File.Delete(file);
+                        var fileinfo = new FileInfo(file);
+                        if (fileinfo.CreationTime < deadline)
+                        {
+                            File.Delete(file);
+                        }
                     }
+                    await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
                 }
-                await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
+                catch (DirectoryNotFoundException)
+                {
+                    await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                }
             }
         }
     }

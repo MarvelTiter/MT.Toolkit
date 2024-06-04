@@ -66,57 +66,89 @@ namespace MT.Toolkit.ReflectionExtension
         public static T Invoke<T>(this Type type, string methodName, params object[] args)
         {
             var method = type.GetMethod(methodName, args.Select(o => o.GetType()).ToArray());
+            if (method == null)
+                return default!;
             MethodCallExpression methodCallExpression = Expression.Call(method, args.Select(Expression.Constant));
-            return (T)Expression.Lambda(methodCallExpression).Compile().DynamicInvoke();
+            return (T)Expression.Lambda(methodCallExpression).Compile().DynamicInvoke()!;
         }
         public static object Invoke(this Type type, Type genericType, string methodName, params object[] args)
         {
             var method = type.GetMethod(methodName, args.Select(o => o.GetType()).ToArray());
+            if (method == null) return default!;
             method = method.MakeGenericMethod(genericType);
             MethodCallExpression methodCallExpression = Expression.Call(method, args.Select(Expression.Constant));
-            return Expression.Lambda(methodCallExpression).Compile().DynamicInvoke();
+            return Expression.Lambda(methodCallExpression).Compile().DynamicInvoke()!;
         }
 
         /// <summary>
-        /// 设置属性的值
+        /// 创建获取属性值的委托
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="self"></param>
+        /// <typeparam name="TProp"></typeparam>
         /// <param name="prop"></param>
-        /// <param name="value"></param>
-        public static void Set<T>(this object self, PropertyInfo prop, T value)
+        /// <returns></returns>
+        public static Func<object, TProp> GetPropertyAccessor<TProp>(this PropertyInfo prop)
         {
-            var valueType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
-            if (prop.PropertyType != valueType)
+            /*
+             * p => (object)p.XXX;
+             */
+            if (prop.DeclaringType == null || !prop.CanRead) return NullGetter<TProp>;
+            var p = Expression.Parameter(typeof(object), "p");
+            var instance = Expression.Convert(p, prop.DeclaringType);
+            var propExp = Expression.Property(instance, prop);
+            Expression body = propExp;
+            if (typeof(TProp) == typeof(object))
             {
-                throw new ArgumentException($"can not cast {valueType} to {prop.PropertyType}");
+                body = Expression.Convert(propExp, typeof(object));
             }
-            if (!prop.CanWrite)
-            {
-                throw new ArgumentException($"{prop.Name} is readonly");
-            }
-            // e.XXX
-            ParameterExpression parameter = Expression.Parameter(self.GetType(), "e");
-            MemberExpression memberExp = Expression.Property(parameter, prop);
-            var before = (T)Expression.Lambda(memberExp, parameter).Compile().DynamicInvoke(self);
-            if (Equals(value, before))
-            {
-                return;
-            }
-            MethodCallExpression body = Expression.Call(parameter, prop.SetMethod, Expression.Constant(value, valueType));
-            Expression.Lambda(body, parameter).Compile().DynamicInvoke(self);
+            var lambda = Expression.Lambda<Func<object, TProp>>(body, p);
+            return lambda.Compile();
+        }
+        /// <summary>
+        /// 创建获取属性值的委托
+        /// </summary>
+        /// <typeparam name="TProp"></typeparam>
+        /// <param name="entity"></param>
+        /// <param name="propName"></param>
+        /// <returns></returns>
+        public static Func<object, TProp> GetPropertyAccessor<TProp>(this object entity, string propName)
+        {
+            var prop = entity.GetType().GetProperty(propName);
+            if (prop == null) return NullGetter<TProp>;
+            return prop.GetPropertyAccessor<TProp>();
         }
 
-        public static void Set<T>(this object self, string propName, T value)
+        static TProp NullGetter<TProp>(object  entity) => default!;
+        /// <summary>
+        /// 创建属性赋值的委托
+        /// </summary>
+        /// <param name="prop"></param>
+        /// <returns></returns>
+        public static Action<object, object> GetPropertySetter(this PropertyInfo prop)
         {
-            var prop = self.GetType().GetProperty(propName);
-            self.Set(prop, value);
+            /*
+             * (p, v) => ((T)p).XXX = (TProp)v; 
+             */
+            if (prop.DeclaringType == null || !prop.CanWrite) return NullSetter;
+            var p = Expression.Parameter(typeof(object), "p");
+            var val = Expression.Parameter(typeof(object), "v");
+            var cp = Expression.Convert(p, prop.DeclaringType);
+            var setMethod = prop.SetMethod!;
+            var set = Expression.Call(cp, setMethod, Expression.Convert(val, prop.PropertyType));
+            var lambda = Expression.Lambda<Action<object, object>>(set, p, val);
+            return lambda.Compile();
         }
-
-        public static T Get<T>(this object self, string prop)
+        /// <summary>
+        /// 创建属性赋值的委托
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="propName"></param>
+        /// <returns></returns>
+        public static Action<object, object> GetPropertySetter(this object entity, string propName)
         {
-            //TODO Member Access
-            throw new NotImplementedException();
+            var prop = entity.GetType().GetProperty(propName);
+            if (prop == null) return NullSetter;
+            return prop.GetPropertySetter();
         }
+        static void NullSetter(object _1, object _2) { }
     }
 }

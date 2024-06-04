@@ -28,7 +28,7 @@ namespace MT.Toolkit.LogTool.DbLogger
             {
                 return;
             }
-            
+
             var logInfo = new LogInfo<TState>
             {
                 LogLevel = logLevel,
