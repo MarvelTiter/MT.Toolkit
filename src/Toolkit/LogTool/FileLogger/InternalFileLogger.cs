@@ -27,14 +27,7 @@ namespace MT.Toolkit.LogTool.FileLogger
             {
                 return;
             }
-            if (typeof(TState) != typeof(string))
-            {
-                if (Setting.OnlyLogString)
-                {
-                    return;
-                }
-            }
-
+            
             if (state?.ToString() == null)
             {
                 return;

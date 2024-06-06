@@ -99,7 +99,7 @@ namespace MT.Toolkit.HttpHelper
         public DataTable ReadReturnValueAsDataTable()
         {
             nsManager?.AddNamespace("xs", "http://www.w3.org/2001/XMLSchema");
-            var xml = xmlString?.GetElement($"//r:{methodName}Result",nsManager);
+            var xml = xmlString?.GetElement($"//r:{methodName}Result", nsManager);
             var schema = xml.GetChildElements("//xs:sequence", nsManager);
             var datas = xml.GetChildElements("//DocumentElement", nsManager);
             return CreateDataTable(schema, datas, nsManager);
@@ -196,7 +196,6 @@ namespace MT.Toolkit.HttpHelper
             return xmlString?.GetValue<T>(expression, nsManager);
         }
 
-
         private static DataTable CreateDataTable(IEnumerable<XElement> schema, IEnumerable<XElement> datas, XmlNamespaceManager? nsManager)
         {
             var dt = new DataTable();
@@ -213,7 +212,8 @@ namespace MT.Toolkit.HttpHelper
                 foreach (DataColumn col in dt.Columns)
                 {
                     var value = d.GetValue(col.ColumnName);
-                    row[col.ColumnName] = value?.Parse(col.DataType);
+                    var v = value?.Parse(col.DataType) ?? DBNull.Value;
+                    row[col.ColumnName] = v;
                 }
                 dt.Rows.Add(row);
             }

@@ -65,6 +65,288 @@ namespace WebServiceTest
         }
 
         [Fact]
+        public void ToDataTable()
+        {
+            string xml = """
+                                <?xml version="1.0" encoding="utf-8"?>
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                    <soap:Body>
+                        <GetMutimeDiaByPlateResponse xmlns="http://risservice.hg-banner.com.cn/">
+                            <GetMutimeDiaByPlateResult>
+                                <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                                    xmlns:msdata="urn:schemas-microsoft-com:xml-msdata"
+                                    xmlns:msprop="urn:schemas-microsoft-com:xml-msprop">
+                                    <xs:element name="NewDataSet" msdata:IsDataSet="true"
+                                        msdata:MainDataTable="MutimeDia" msdata:UseCurrentLocale="true">
+                                        <xs:complexType>
+                                            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                                                <xs:element name="MutimeDia" msprop:BaseTable.0="JOBS"
+                                                    msprop:BaseTable.1="BASIC_STATION">
+                                                    <xs:complexType>
+                                                        <xs:sequence>
+                                                            <xs:element name="VIDEOEXIST" msprop:OraDbType="104"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="VIDEOSIZE" msprop:OraDbType="104"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="JOB_DATE" msprop:OraDbType="106"
+                                                                msprop:BaseColumn="JOB_DATE" type="xs:dateTime"
+                                                                minOccurs="0" />
+                                                            <xs:element name="JYLSH" msprop:OraDbType="126"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="JYCS" msprop:OraDbType="111"
+                                                                type="xs:short" minOccurs="0" />
+                                                            <xs:element name="JYXM" msprop:OraDbType="126"
+                                                                msprop:BaseColumn="LXIP" type="xs:string"
+                                                                minOccurs="0" />
+                                                            <xs:element name="SPLX" msprop:OraDbType="111"
+                                                                msprop:BaseColumn="LXPORT" type="xs:short"
+                                                                minOccurs="0" />
+                                                            <xs:element name="SPTD" msprop:OraDbType="111"
+                                                                msprop:BaseColumn="STATIONIP" type="xs:short"
+                                                                minOccurs="0" />
+                                                            <xs:element name="KSSJ" msprop:OraDbType="106"
+                                                                msprop:BaseColumn="STATIONPORT" type="xs:dateTime"
+                                                                minOccurs="0" />
+                                                            <xs:element name="JSSJ" msprop:OraDbType="106"
+                                                                type="xs:dateTime" minOccurs="0" />
+                                                            <xs:element name="ZDXZ" msprop:OraDbType="111"
+                                                                type="xs:short" minOccurs="0" />
+                                                            <xs:element name="JCZBH" msprop:OraDbType="104"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="XZCS" msprop:OraDbType="111"
+                                                                type="xs:short" minOccurs="0" />
+                                                            <xs:element name="SPSC" msprop:OraDbType="111"
+                                                                type="xs:short" minOccurs="0" />
+                                                            <xs:element name="JYXMNAME" msprop:OraDbType="126"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="LXIP" msprop:OraDbType="104"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="LXPORT" msprop:OraDbType="104"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="STATIONIP" msprop:OraDbType="126"
+                                                                type="xs:string" minOccurs="0" />
+                                                            <xs:element name="STATIONPORT" msprop:OraDbType="126"
+                                                                type="xs:string" minOccurs="0" />
+                                                        </xs:sequence>
+                                                    </xs:complexType>
+                                                </xs:element>
+                                            </xs:choice>
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:schema>
+                                <diffgr:diffgram xmlns:msdata="urn:schemas-microsoft-com:xml-msdata"
+                                    xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1">
+                                    <DocumentElement xmlns="">
+                                        <MutimeDia diffgr:id="MutimeDia1" msdata:rowOrder="0"
+                                            diffgr:hasChanges="modified">
+                                            <VIDEOEXIST>1</VIDEOEXIST>
+                                            <VIDEOSIZE>14261782</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>C1</JYXM>
+                                            <SPLX>1</SPLX>
+                                            <SPTD>13</SPTD>
+                                            <KSSJ>2024-06-06T10:57:38+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:59:19+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>底盘检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia2" msdata:rowOrder="1"
+                                            diffgr:hasChanges="modified">
+                                            <VIDEOEXIST>1</VIDEOEXIST>
+                                            <VIDEOSIZE>5174101</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>NQ</JYXM>
+                                            <SPLX>1</SPLX>
+                                            <SPTD>9</SPTD>
+                                            <KSSJ>2024-06-06T10:56:52+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>联网查询检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia3" msdata:rowOrder="2"
+                                            diffgr:hasChanges="modified">
+                                            <VIDEOEXIST>1</VIDEOEXIST>
+                                            <VIDEOSIZE>5039495</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>NQ</JYXM>
+                                            <SPLX>2</SPLX>
+                                            <SPTD>10</SPTD>
+                                            <KSSJ>2024-06-06T10:56:52+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>联网查询检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia4" msdata:rowOrder="3"
+                                            diffgr:hasChanges="modified">
+                                            <VIDEOEXIST>1</VIDEOEXIST>
+                                            <VIDEOSIZE>6315202</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>UC</JYXM>
+                                            <SPLX>1</SPLX>
+                                            <SPTD>9</SPTD>
+                                            <KSSJ>2024-06-06T10:57:05+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>唯一性检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia5" msdata:rowOrder="4"
+                                            diffgr:hasChanges="modified">
+                                            <VIDEOEXIST>1</VIDEOEXIST>
+                                            <VIDEOSIZE>6464899</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>UC</JYXM>
+                                            <SPLX>2</SPLX>
+                                            <SPTD>10</SPTD>
+                                            <KSSJ>2024-06-06T10:57:05+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>唯一性检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                    </DocumentElement>
+                                    <diffgr:before>
+                                        <MutimeDia diffgr:id="MutimeDia1" msdata:rowOrder="0" xmlns="">
+                                            <VIDEOEXIST>0</VIDEOEXIST>
+                                            <VIDEOSIZE>0</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>C1</JYXM>
+                                            <SPLX>1</SPLX>
+                                            <SPTD>13</SPTD>
+                                            <KSSJ>2024-06-06T10:57:38+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:59:19+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>底盘检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia2" msdata:rowOrder="1" xmlns="">
+                                            <VIDEOEXIST>0</VIDEOEXIST>
+                                            <VIDEOSIZE>0</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>NQ</JYXM>
+                                            <SPLX>1</SPLX>
+                                            <SPTD>9</SPTD>
+                                            <KSSJ>2024-06-06T10:56:52+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>联网查询检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia3" msdata:rowOrder="2" xmlns="">
+                                            <VIDEOEXIST>0</VIDEOEXIST>
+                                            <VIDEOSIZE>0</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>NQ</JYXM>
+                                            <SPLX>2</SPLX>
+                                            <SPTD>10</SPTD>
+                                            <KSSJ>2024-06-06T10:56:52+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>联网查询检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia4" msdata:rowOrder="3" xmlns="">
+                                            <VIDEOEXIST>0</VIDEOEXIST>
+                                            <VIDEOSIZE>0</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>UC</JYXM>
+                                            <SPLX>1</SPLX>
+                                            <SPTD>9</SPTD>
+                                            <KSSJ>2024-06-06T10:57:05+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>唯一性检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                        <MutimeDia diffgr:id="MutimeDia5" msdata:rowOrder="4" xmlns="">
+                                            <VIDEOEXIST>0</VIDEOEXIST>
+                                            <VIDEOSIZE>0</VIDEOSIZE>
+                                            <JOB_DATE>2024-06-06T10:39:24+08:00</JOB_DATE>
+                                            <JYLSH>240606370004N0264985</JYLSH>
+                                            <JYCS>1</JYCS>
+                                            <JYXM>UC</JYXM>
+                                            <SPLX>2</SPLX>
+                                            <SPTD>10</SPTD>
+                                            <KSSJ>2024-06-06T10:57:05+08:00</KSSJ>
+                                            <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
+                                            <ZDXZ>0</ZDXZ>
+                                            <JCZBH>3701000098</JCZBH>
+                                            <JYXMNAME>唯一性检验</JYXMNAME>
+                                            <LXIP>172.37.90.2 </LXIP>
+                                            <LXPORT>8092 </LXPORT>
+                                            <STATIONIP>172.37.90.2</STATIONIP>
+                                            <STATIONPORT>7091</STATIONPORT>
+                                        </MutimeDia>
+                                    </diffgr:before>
+                                </diffgr:diffgram>
+                            </GetMutimeDiaByPlateResult>
+                        </GetMutimeDiaByPlateResponse>
+                    </soap:Body>
+                </soap:Envelope>
+                """;
+
+        }
+
+        [Fact]
         public void Result()
         {
             string responseXml = @"<?xml version=""1.0"" encoding=""utf-8""?>

@@ -76,7 +76,7 @@ namespace MT.Toolkit.LogTool
         private static string GetLogPath()
         {
             string newFilePath;
-            var logDir = Path.Combine(Environment.CurrentDirectory, "logs");
+            var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
             Directory.CreateDirectory(logDir);
             string extension = ".log";
             string fileNameNotExt = $"{DateTime.Now:yyyy-MM-dd}_Part";

@@ -16,5 +16,6 @@ namespace MT.Toolkit.LogTool.FileLogger
         /// </summary>
         public bool OnlyLogString { get; set; } = true;
         public Func<LogInfo, bool> CustomCheck { get; set; } = _ => true;
+
     }
 }

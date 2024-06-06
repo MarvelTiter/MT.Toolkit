@@ -28,7 +28,7 @@ namespace MT.Toolkit.LogTool.FileLogger
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var logPath = Path.Combine(Environment.CurrentDirectory, "logs");
+                var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
                 if (!Directory.Exists(logPath))
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
