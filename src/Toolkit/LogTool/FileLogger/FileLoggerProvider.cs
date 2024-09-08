@@ -9,12 +9,13 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.LogTool.FileLogger
 {
-    internal class FileLoggerProvider(IOptionsMonitor<FileLoggerSetting> option) : ILoggerProvider
+    internal class FileLoggerProvider(IOptions<LoggerSetting> option) : ILoggerProvider
     {
         private readonly ConcurrentDictionary<string, InternalFileLogger> loggers = new();
+        private readonly LocalFileLogger fileLogger = LocalFileLogger.GetFileLogger(option.Value).Value;
         public ILogger CreateLogger(string categoryName)
         {
-            return loggers.GetOrAdd(categoryName, new InternalFileLogger(categoryName, option));
+            return loggers.GetOrAdd(categoryName, new InternalFileLogger(categoryName, option, fileLogger));
         }
 
         public void Dispose()

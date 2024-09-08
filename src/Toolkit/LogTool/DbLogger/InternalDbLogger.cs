@@ -9,9 +9,19 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.LogTool.DbLogger
 {
-    internal class InternalDbLogger(string category, IOptionsMonitor<DbLoggerSetting> options, IServiceProvider serviceProvider) : ILogger
+    internal class InternalDbLogger : ILogger
     {
-        private DbLoggerSetting Setting => options.CurrentValue;
+        private readonly string category;
+        private readonly IOptions<LoggerSetting> options;
+        private readonly DatabaseLogger dbLogger;
+
+        public InternalDbLogger(string category, IOptions<LoggerSetting> options, DatabaseLogger dbLogger)
+        {
+            this.category = category;
+            this.options = options;
+            this.dbLogger = dbLogger;
+        }
+        private LoggerSetting Setting => options.Value;
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
             return default;
@@ -19,7 +29,7 @@ namespace MT.Toolkit.LogTool.DbLogger
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return logLevel >= Setting.WriteLevel;
+            return Setting.IsEnabled(LogType.Database, logLevel);
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -39,11 +49,9 @@ namespace MT.Toolkit.LogTool.DbLogger
                 Category = category,
                 Exception = exception
             };
-            if (Setting.CustomCheck(logInfo))
+            if (Setting.DbLogInfoFilter(logInfo))
             {
-                var logService = serviceProvider.GetService<IDbLogger<TState>>();
-                if (logService == null) return;
-                logService.Log(logInfo);
+               dbLogger.WriteLog(logInfo);
             }
         }
     }

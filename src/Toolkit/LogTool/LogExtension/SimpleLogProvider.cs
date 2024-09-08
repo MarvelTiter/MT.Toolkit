@@ -15,11 +15,11 @@ namespace MT.Toolkit.LogTool.LogExtension
 	{
 		private bool disposedValue;
 		private readonly IDisposable? _onChangeToken;
-		private SimpleLoggerConfiguration _currentConfig;
+		private LoggerSetting _currentConfig;
 		private readonly ConcurrentDictionary<string, InternalLogger> _loggers =
 			new ConcurrentDictionary<string, InternalLogger>(StringComparer.OrdinalIgnoreCase);
 
-		public SimpleLogProvider(IOptionsMonitor<SimpleLoggerConfiguration> config)
+		public SimpleLogProvider(IOptionsMonitor<LoggerSetting> config)
 		{
 			_currentConfig = config.CurrentValue;
 			_onChangeToken = config.OnChange(updatedConfig => _currentConfig = updatedConfig);
@@ -28,7 +28,7 @@ namespace MT.Toolkit.LogTool.LogExtension
 		public ILogger CreateLogger(string categoryName) =>
 			_loggers.GetOrAdd(categoryName, name => new InternalLogger(name, GetCurrentConfig));
 
-		SimpleLoggerConfiguration GetCurrentConfig() => _currentConfig;
+		LoggerSetting GetCurrentConfig() => _currentConfig;
 
 		protected virtual void Dispose(bool disposing)
 		{

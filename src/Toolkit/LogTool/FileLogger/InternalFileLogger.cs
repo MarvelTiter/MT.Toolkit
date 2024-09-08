@@ -8,9 +8,13 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.LogTool.FileLogger
 {
-    internal class InternalFileLogger(string category, IOptionsMonitor<FileLoggerSetting> options) : ILogger
+    internal class InternalFileLogger(string category, IOptions<LoggerSetting> options, LocalFileLogger fileLogger) : ILogger
     {
-        private FileLoggerSetting Setting => options.CurrentValue;
+        private readonly string category = category;
+        private readonly IOptions<LoggerSetting> options = options;
+        private readonly LocalFileLogger fileLogger = fileLogger;
+
+        private LoggerSetting Setting => options.Value;
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
             return default;
@@ -18,7 +22,7 @@ namespace MT.Toolkit.LogTool.FileLogger
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return logLevel >= Setting.WriteLevel;
+            return Setting.IsEnabled(LogType.File, logLevel);
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -27,7 +31,7 @@ namespace MT.Toolkit.LogTool.FileLogger
             {
                 return;
             }
-            
+
             if (state?.ToString() == null)
             {
                 return;
@@ -44,11 +48,10 @@ namespace MT.Toolkit.LogTool.FileLogger
                 Exception = exception
             };
 
-            if (Setting.CustomCheck(lofInfo))
+            if (Setting.FileLogInfoFilter(lofInfo))
             {
-                LocalFileLogger.Instance.WriteLog(lofInfo);
+                fileLogger.WriteLog(lofInfo);
             }
-
         }
     }
 }

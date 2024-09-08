@@ -9,9 +9,9 @@ namespace MT.Toolkit.LogTool.LogExtension
 	internal class InternalLogger : ILogger
 	{
 		private readonly string name;
-		private readonly Func<SimpleLoggerConfiguration> getCurrentConfig;
+		private readonly Func<LoggerSetting> getCurrentConfig;
 		private readonly Logger logger;
-		public InternalLogger(string name, Func<SimpleLoggerConfiguration> getCurrentConfig)
+		public InternalLogger(string name, Func<LoggerSetting> getCurrentConfig)
 		{
 			this.name = name;
 			this.getCurrentConfig = getCurrentConfig;

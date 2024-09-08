@@ -7,15 +7,27 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.LogTool.FileLogger
 {
-    public class FileLoggerSetting
+    public interface IFileLoggerSetting
     {
-        public int? FileSavedDays { get; set; } = 7;
-        public LogLevel WriteLevel { get; set; } = LogLevel.Error;
         /// <summary>
-        /// 默认true
+        /// 文件保留天数，默认7天
         /// </summary>
-        public bool OnlyLogString { get; set; } = true;
-        public Func<LogInfo, bool> CustomCheck { get; set; } = _ => true;
-
+        int FileSavedDays { get; set; }
+        /// <summary>
+        /// 日志保存目录
+        /// </summary>
+        string? LogFileFolder { get; set; }
+        /// <summary>
+        /// 文件大小，默认1m
+        /// </summary>
+        long LogFileSize { get; set; }
+        /// <summary>
+        /// 设置写入文件的日志级别
+        /// </summary>
+        void SetFileWriteLevel(LogLevel logLevel);
+        /// <summary>
+        /// 设置写入文件的日志过滤
+        /// </summary>
+        void SetFileLogInfoFilter(Func<LogInfo, bool> filter);
     }
 }

@@ -6,10 +6,10 @@ namespace MT.Toolkit.LogTool
 {
 	public class SimpleLogger
 	{
-		static Logger logger;
-		public static void Config(Action<SimpleLoggerConfiguration> action)
+		static Logger? logger;
+		public static void Config(Action<LoggerSetting> action)
 		{
-			var logConfig = new SimpleLoggerConfiguration();
+			var logConfig = new LoggerSetting();
 			action?.Invoke(logConfig);
 			logger = new Logger(logConfig);
 		}
@@ -23,30 +23,30 @@ namespace MT.Toolkit.LogTool
 			[CallerFilePath] string category = "",
 			[CallerLineNumber] int line = 0,
 			[CallerMemberName] string member = "",
-			Exception ex = null)
+			Exception? ex = null)
 		{
 			CheckLoggerConfig();
-			logger.Log(LogLevel.Information, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
+			logger?.Log(LogLevel.Information, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
 		}
 
 		public static void LogDebug(string msg,
 			[CallerFilePath] string category = "",
 			[CallerLineNumber] int line = 0,
 			[CallerMemberName] string member = "",
-			Exception ex = null)
+			Exception? ex = null)
 		{
 			CheckLoggerConfig();
-			logger.Log(LogLevel.Debug, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
+			logger?.Log(LogLevel.Debug, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
 		}
 
 		public static void LogError(string msg,
 			[CallerFilePath] string category = "",
 			[CallerLineNumber] int line = 0,
 			[CallerMemberName] string member = "",
-			Exception ex = null)
+			Exception? ex = null)
 		{
 			CheckLoggerConfig();
-			logger.Log(LogLevel.Error, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
+			logger?.Log(LogLevel.Error, msg, (s, e) => s, category, eventId: line, eventName: member, exception: ex);
 		}
 	}
 }

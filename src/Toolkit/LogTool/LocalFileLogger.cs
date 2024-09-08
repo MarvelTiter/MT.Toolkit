@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using MT.Toolkit.LogTool.FileLogger;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -16,67 +18,77 @@ namespace MT.Toolkit.LogTool
             public string Path { get; set; }
             public string Content { get; set; }
         }
-        private static Lazy<ISimpleLogger> _instance = new(() => new LocalFileLogger());
-        public static ISimpleLogger Instance => _instance.Value;
-        public SimpleLoggerConfiguration? LogConfig { get; set; }
+        private static Lazy<LocalFileLogger>? _instance;
+
+        public static Lazy<LocalFileLogger> GetFileLogger(LoggerSetting configuration)
+        {
+            _instance ??= new Lazy<LocalFileLogger>(() =>
+            {
+                return new LocalFileLogger(configuration);
+            });
+            return _instance;
+        }
+
+        public LoggerSetting LogConfig { get; set; }
 
         static readonly ConcurrentQueue<LogItem> logQueue = new ConcurrentQueue<LogItem>();
 
         private string separator = "----------------------------------------------------------------------------------------------------------------------";
+        Task writeTask;
         CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
-        private LocalFileLogger()
+        private LocalFileLogger(LoggerSetting configuration)
         {
+            LogConfig = configuration;
             var token = CancellationTokenSource.Token;
-            var writeTask = new Task(obj =>
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    // 阻塞1秒
-                    token.WaitHandle.WaitOne(TimeSpan.FromSeconds(1));
-                    List<string[]> temp = new List<string[]>();
-                    foreach (var logItem in logQueue)
-                    {
-                        string logPath = logItem.Path;
-                        string logMergeContent = $"{logItem.Content}{separator}{Environment.NewLine}";
-                        string[]? logArr = temp.FirstOrDefault(d => d[0].Equals(logPath));
-                        if (logArr != null)
-                        {
-                            logArr[1] = string.Concat(logArr[1], logMergeContent); 
-                        }
-                        else
-                        {
-                            logArr =
-                            [
-                                logPath,
+            writeTask = new Task(() =>
+           {
+               while (!CancellationTokenSource.IsCancellationRequested)
+               {
+                   // 阻塞1秒
+                   token.WaitHandle.WaitOne(TimeSpan.FromSeconds(1));
+                   List<string[]> temp = new List<string[]>();
+                   
+                   while(logQueue.TryDequeue(out var logItem))
+                   {
+                       string logPath = logItem.Path;
+                       string logMergeContent = $"{logItem.Content}{separator}{Environment.NewLine}";
+                       string[]? logArr = temp.FirstOrDefault(d => d[0].Equals(logPath));
+                       if (logArr != null)
+                       {
+                           logArr[1] = string.Concat(logArr[1], logMergeContent);
+                       }
+                       else
+                       {
+                           logArr =
+                           [
+                               logPath,
                                 logMergeContent
-                            ];
-                            temp.Add(logArr);
-                        }
+                           ];
+                           temp.Add(logArr);
+                       }
+                   }
 
-                        logQueue.TryDequeue(out var _);
-                    }
-
-                    foreach (var item in temp)
-                    {
-                        WriteText(item[0], item[1]);
-                    }
-                }
-            }, null, token, TaskCreationOptions.LongRunning);
+                   foreach (var item in temp)
+                   {
+                       WriteText(item[0], item[1]);
+                   }
+               }
+           }, token, TaskCreationOptions.LongRunning);
             writeTask.Start();
         }
-
         public void WriteLog(LogInfo logInfo)
         {
             logQueue.Enqueue(new LogItem
             {
-                Path = GetLogPath(),
+                Path = GetLogPath(LogConfig),
                 Content = logInfo.FormatLogMessage()
             });
         }
-        private static string GetLogPath()
+
+        private static string GetLogPath(LoggerSetting setting)
         {
             string newFilePath;
-            var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            var logDir = setting.LogFileFolder ?? Path.Combine(Environment.CurrentDirectory, "logs");
             Directory.CreateDirectory(logDir);
             string extension = ".log";
             string fileNameNotExt = $"{DateTime.Now:yyyy-MM-dd}_Part";
@@ -87,7 +99,7 @@ namespace MT.Toolkit.LogTool
             {
                 int fileMaxLen = filePaths.Max(d => d.Length);
                 string lastFilePath = filePaths.Where(d => d.Length == fileMaxLen).OrderByDescending(d => d).First();
-                if (new FileInfo(lastFilePath).Length > 1 * 1024 * 1024)
+                if (new FileInfo(lastFilePath).Length > setting.LogFileSize)
                 {
                     var no = new Regex(@"(?<=Part)(\d+)").Match(Path.GetFileName(lastFilePath)).Value;
                     var parse = int.TryParse(no, out int tempno);
@@ -129,6 +141,8 @@ namespace MT.Toolkit.LogTool
         ~LocalFileLogger()
         {
             CancellationTokenSource.Cancel();
+            writeTask.Wait();
+            writeTask.Dispose();
         }
     }
 }

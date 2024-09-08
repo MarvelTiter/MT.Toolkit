@@ -9,6 +9,7 @@ namespace MT.Toolkit.LogTool
 		File = 1 << 1,
 		Debug = 1 << 2,
 		Custom = 1 << 3,
+		Database = 1 << 4,
 	}
 	/// <summary>
 	/// 日志级别

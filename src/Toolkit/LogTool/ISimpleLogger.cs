@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 
 namespace MT.Toolkit.LogTool
 {
 	public interface ISimpleLogger
 	{
-		SimpleLoggerConfiguration LogConfig { get; set; }
-		void WriteLog(LogInfo logInfo);
+		//LoggerSetting LogConfig { get; set; }
+        void WriteLog(LogInfo logInfo);
 	}
 }

@@ -1,7 +1,14 @@
-﻿namespace MT.Toolkit.LogTool.DbLogger
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace MT.Toolkit.LogTool.DbLogger
 {
-    public interface IDbLogger<TData>
+    public interface IDbLogger
     {
-        void Log(LogInfo<TData> data);
+        Task LogAsync(LogInfo data, CancellationToken cancellationToken);
     }
 }

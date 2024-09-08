@@ -7,10 +7,13 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.LogTool.DbLogger
 {
-    public class DbLoggerSetting
+    public interface IDbLoggerSetting
     {
-        public LogLevel WriteLevel { get; set; } = LogLevel.Error;
-        public bool LogString { get; set; } = false;
-        public Func<LogInfo, bool> CustomCheck { get; set; } = _ => true;
+        void SetDbWriteLevel(LogLevel logLevel);
+        void SetDbLogInfoFilter(Func<LogInfo, bool> filter);
+        /// <summary>
+        /// 指定如何获取IDbLogger实例，否则默认从Ioc容器中获取该实例
+        /// </summary>
+        void SetDbLogger(Func<IDbLogger> factory);
     }
 }
