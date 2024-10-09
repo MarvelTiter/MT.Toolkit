@@ -7,18 +7,21 @@ namespace MT.Toolkit.StringExtension;
 
 public static partial class StringExtensions
 {
-    public static string If(this string self, Func<bool> condition)
+    public static string If(this string? self, Func<bool> condition)
     {
         return self.If(condition.Invoke());
     }
 
-    public static string If(this string self, bool condition)
+    public static string If(this string? self, bool condition)
     {
+        if (string.IsNullOrEmpty(self))
+        {
+            return string.Empty;
+        }
         if (condition)
         {
             return self;
         }
-
         return string.Empty;
     }
 

@@ -10,7 +10,6 @@ namespace MT.Toolkit.Mapper
         MapperConfig Configuration { get; }
     }
     
-    [Obsolete("使用AutoGenMapperGenerator.AutoMapperGenerator")]
     public class SimpleMapper : ISimpleMapper
     {
         private readonly Mapper _map;
@@ -35,7 +34,6 @@ namespace MT.Toolkit.Mapper
         }
     }
 
-    [Obsolete("使用AutoGenMapperGenerator.AutoMapperGenerator")]
     public class Mapper
     {
         public static TValue Map<TValue>(TValue source)
@@ -82,7 +80,6 @@ namespace MT.Toolkit.Mapper
         /// <typeparam name="TFrom"></typeparam>
         /// <typeparam name="TTarget"></typeparam>
         /// <param name="context"></param>
-        [Obsolete("使用AutoGenMapperGenerator.AutoMapperGenerator")]
         public Mapper CreateMap<TFrom, TTarget>(Action<MapperRule<TFrom, TTarget>> context = null)
         {
             var map = (MapperRule<TFrom, TTarget>)MapRuleProvider.GetMapRule<TFrom, TTarget>();

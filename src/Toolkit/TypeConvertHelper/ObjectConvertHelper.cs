@@ -19,7 +19,7 @@ namespace MT.Toolkit.TypeConvertHelper
             {
                 return default;
             }
-             type = Nullable.GetUnderlyingType(type) ?? type;
+            type = Nullable.GetUnderlyingType(type) ?? type;
             return Convert.ChangeType(self, type);
         }
     }
