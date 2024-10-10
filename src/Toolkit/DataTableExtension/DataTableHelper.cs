@@ -95,6 +95,19 @@ namespace MT.Toolkit.DataTableExtension
             }
             return dt?.Rows[0];
         }
+
+        public static DataTable ToDataTable<T>(this IEnumerable<T> datas)
+        {
+            var dt = MapToDataTableExtension<T>.GetDataTable();
+            foreach (var item in datas)
+            {
+                var row = dt.NewRow();
+                MapToDataTableExtension<T>.FillDataRow(item, row);
+                dt.Rows.Add(row);
+            }
+            //dt.Columns.Add()
+            return dt;
+        }
     }
 }
 
