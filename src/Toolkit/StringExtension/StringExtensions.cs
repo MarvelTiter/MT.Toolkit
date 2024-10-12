@@ -31,7 +31,10 @@ public static partial class StringExtensions
         {
             return false;
         }
-
+        if (rule is null)
+        {
+            return true;
+        }
         var b = rule?.Invoke(self);
         return b.HasValue && b.Value;
     }
