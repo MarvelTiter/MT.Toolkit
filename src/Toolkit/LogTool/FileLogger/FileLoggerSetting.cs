@@ -24,7 +24,7 @@ namespace MT.Toolkit.LogTool.FileLogger
         /// <summary>
         /// 设置写入文件的日志级别
         /// </summary>
-        void SetFileWriteLevel(LogLevel logLevel);
+        void SetFileWriteLevel<T>(LogLevel logLevel);
         /// <summary>
         /// 设置写入文件的日志过滤
         /// </summary>

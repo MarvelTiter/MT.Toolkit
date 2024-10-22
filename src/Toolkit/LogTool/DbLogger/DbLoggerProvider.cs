@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+#if NET6_0_OR_GREATER
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -45,3 +46,4 @@ internal class DbLoggerProvider : ILoggerProvider
         GC.SuppressFinalize(this);
     }
 }
+#endif

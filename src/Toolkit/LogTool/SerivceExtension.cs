@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿#if NET6_0_OR_GREATER
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MT.Toolkit.LogTool.DbLogger;
 using MT.Toolkit.LogTool.FileLogger;
@@ -40,3 +41,4 @@ namespace MT.Toolkit.LogTool
         }
     }
 }
+#endif

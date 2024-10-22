@@ -4,13 +4,15 @@ using MT.Toolkit.LogTool.FileLogger;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 namespace MT.Toolkit.LogTool
 {
     public static class LoggerSettingExtensions
     {
-        public static bool IsEnabled(this LoggerSetting loggerSetting, LogType logType, LogLevel logLevel)
+        public static bool IsEnabled(this LoggerSetting loggerSetting, LogType logType, string? category, LogLevel logLevel)
         {
-            return logLevel >= loggerSetting.LogLimit[logType];
+            var info = loggerSetting.LogLimit[logType];
+            return logLevel >= info.GetLevel(category);
         }
         public static void EnableCustomLogger(this LoggerSetting loggerSetting, Func<LoggerSetting, ISimpleLogger> getLogger)
         {
@@ -24,10 +26,27 @@ namespace MT.Toolkit.LogTool
         {
             loggerSetting.EnabledLogType = LogType.Console | LogType.Debug | LogType.File;
         }
-
-        public static void ConfiguraLogLevel(this LoggerSetting loggerSetting, LogType logType, LogLevel logLevel)
+        public static void ConfiguraLogLevel<T>(this LoggerSetting loggerSetting, LogType logType, LogLevel logLevel)
         {
-            loggerSetting.LogLimit[logType] = logLevel;
+            ConfiguraLogLevel(loggerSetting, logType, typeof(T).FullName!, logLevel);
+        }
+        public static void ConfiguraLogLevel(this LoggerSetting loggerSetting, LogType logType, string category, LogLevel logLevel)
+        {
+            var info = loggerSetting.LogLimit[logType];
+            info.Add(category, logLevel);
+        }
+
+        public static void AddOrIgnore(this LoggerSetting loggerSetting, LogType logType, string category, LogLevel logLevel)
+        {
+            var info = loggerSetting.LogLimit[logType];
+            if (info.ContainsKey(category)) return;
+            info.Add(category, logLevel);
+        }
+
+        public static LogLevel GetLogLevel(this LoggerSetting loggerSetting, LogType logType, string category)
+        {
+            var info = loggerSetting.LogLimit[logType];
+            return info.GetLevel(category);
         }
     }
     public class LoggerSetting : IFileLoggerSetting, IDbLoggerSetting
@@ -41,7 +60,16 @@ namespace MT.Toolkit.LogTool
         public string? LogFileFolder { get; set; }
         public long LogFileSize { get; set; } = 1 * 1024 * 1024;
         internal Func<LogInfo, bool> FileLogInfoFilter { get; set; } = _ => true;
-        public void SetFileWriteLevel(LogLevel logLevel) => LogLimit[LogType.File] = logLevel;
+        public void SetFileWriteLevel<T>(LogLevel logLevel)
+        {
+            SetFileWriteLevel(typeof(T).FullName!, logLevel);
+        }
+        public void SetFileWriteLevel(string category, LogLevel logLevel)
+        {
+            var info = LogLimit[LogType.File];
+            info.Add(category, logLevel);
+        }
+        //public void SetCategoryFilter(string category) 
         public void SetFileLogInfoFilter(Func<LogInfo, bool> filter)
         {
             FileLogInfoFilter = filter;
@@ -51,7 +79,10 @@ namespace MT.Toolkit.LogTool
         #region DbLogger
         internal Func<LogInfo, bool> DbLogInfoFilter { get; set; } = _ => true;
         internal Func<IDbLogger>? DbLoggerFacotry { get; set; }
-        public void SetDbWriteLevel(LogLevel logLevel) => LogLimit[LogType.Database] = logLevel;
+        public void SetDbWriteLevel(LogLevel logLevel)
+        {
+
+        }
         public void SetDbLogInfoFilter(Func<LogInfo, bool> filter)
         {
             DbLogInfoFilter = filter;
@@ -60,7 +91,7 @@ namespace MT.Toolkit.LogTool
         {
             DbLoggerFacotry = factory;
         }
-        
+
         #endregion
 
         //internal Dictionary<LogLevel, LogType> LogTarget { get; set; } = new Dictionary<LogLevel, LogType>
@@ -73,14 +104,40 @@ namespace MT.Toolkit.LogTool
         //    [LogLevel.Critical] = LogType.Console | LogType.File,
         //    [LogLevel.None] = LogType.Console,
         //};
-
-        internal Dictionary<LogType, LogLevel> LogLimit { get; set; } = new()
+        internal class LogLevelInfo : Dictionary<string, LogLevel>
         {
-            [LogType.Debug] = LogLevel.Information,
-            [LogType.Console] = LogLevel.Information,
-            [LogType.File] = LogLevel.Error,
-            [LogType.Database] = LogLevel.Error,
-            [LogType.Custom] = LogLevel.None,
+            private readonly LogLevel defaultLevel;
+            public LogLevelInfo(LogLevel defaultLevel)
+            {
+                this.defaultLevel = defaultLevel;
+            }
+
+            public LogLevel DefaultLevel => defaultLevel;
+
+            public LogLevel GetLevel(string? category)
+            {
+                if (string.IsNullOrEmpty(category)) return defaultLevel;
+                var key = Keys.FirstOrDefault(k => k == category);
+                if (key is null)
+                {
+                    key = Keys.FirstOrDefault(k => k.StartsWith(category));
+                }
+                if (key is null)
+                {
+                    return defaultLevel;
+                }
+                return this[key];
+            }
+
+            public static LogLevelInfo Default(LogLevel level) => new LogLevelInfo(level);
+        }
+        internal Dictionary<LogType, LogLevelInfo> LogLimit { get; set; } = new()
+        {
+            [LogType.Debug] = LogLevelInfo.Default(LogLevel.Information),
+            [LogType.Console] = LogLevelInfo.Default(LogLevel.Information),
+            [LogType.File] = LogLevelInfo.Default(LogLevel.Error),
+            [LogType.Database] = LogLevelInfo.Default(LogLevel.Error),
+            [LogType.Custom] = LogLevelInfo.Default(LogLevel.None),
         };
 
         public Dictionary<LogLevel, ConsoleColor> ConsoleColor { get; set; } = new()
