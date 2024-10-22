@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿#if NET6_0_OR_GREATER
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -12,16 +13,24 @@ namespace MT.Toolkit.LogTool.DbLogger
     internal class InternalDbLogger : ILogger
     {
         private readonly string category;
-        private readonly IOptions<LoggerSetting> options;
+        private LogLevel enableLevel;
         private readonly DatabaseLogger dbLogger;
 
         public InternalDbLogger(string category, IOptions<LoggerSetting> options, DatabaseLogger dbLogger)
         {
             this.category = category;
-            this.options = options;
             this.dbLogger = dbLogger;
+            Setting = options.Value;
+            Setting.Changed += Setting_Changed;
+            this.enableLevel = Setting.GetLogLevel(LogType.Database, category);
         }
-        private LoggerSetting Setting => options.Value;
+
+        private void Setting_Changed()
+        {
+            this.enableLevel = Setting.GetLogLevel(LogType.Database, category);
+        }
+
+        private LoggerSetting Setting { get; }
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
             return default;
@@ -29,7 +38,7 @@ namespace MT.Toolkit.LogTool.DbLogger
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return Setting.IsEnabled(LogType.Database, logLevel);
+            return logLevel >= enableLevel;
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -51,8 +60,9 @@ namespace MT.Toolkit.LogTool.DbLogger
             };
             if (Setting.DbLogInfoFilter(logInfo))
             {
-               dbLogger.WriteLog(logInfo);
+                dbLogger.WriteLog(logInfo);
             }
         }
     }
 }
+#endif

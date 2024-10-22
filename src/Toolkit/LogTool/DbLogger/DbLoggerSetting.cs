@@ -9,7 +9,7 @@ namespace MT.Toolkit.LogTool.DbLogger
 {
     public interface IDbLoggerSetting
     {
-        void SetDbWriteLevel(LogLevel logLevel);
+        void SetDbWriteLevel(string category, LogLevel logLevel);
         void SetDbLogInfoFilter(Func<LogInfo, bool> filter);
         /// <summary>
         /// 指定如何获取IDbLogger实例，否则默认从Ioc容器中获取该实例

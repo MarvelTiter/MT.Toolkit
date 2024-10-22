@@ -23,10 +23,7 @@ namespace MapperTest
             services.AddScoped<IDbLogger, DbLogger>();
             services.AddLogging(builder =>
             {
-                builder.AddDbLogger(s =>
-                {
-                    s.SetDbWriteLevel(LogLevel.Debug);
-                });
+                builder.AddDbLogger();
 
             });
             var provider = services.BuildServiceProvider();

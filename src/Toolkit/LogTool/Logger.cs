@@ -71,7 +71,7 @@ namespace MT.Toolkit.LogTool
 
                 foreach (var item in LoggerDict)
                 {
-                    if (!logConfig.IsEnabled(item.Key, level))
+                    if (!logConfig.IsEnabled(item.Key, logInfo.Category, level))
                     {
                         continue;
                     }
