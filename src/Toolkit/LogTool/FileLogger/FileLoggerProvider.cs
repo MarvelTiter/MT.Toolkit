@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -17,33 +18,41 @@ namespace MT.Toolkit.LogTool.FileLogger
         private readonly Lazy<LocalFileLogger> fileLogger;
         private readonly IOptions<LoggerSetting> option;
         private readonly IConfiguration configuration;
+        private IDisposable reload;
         public FileLoggerProvider(IOptions<LoggerSetting> option, IConfiguration configuration)
         {
             fileLogger = LocalFileLogger.GetFileLogger(option.Value);
             this.option = option;
             this.configuration = configuration;
-            //var setting = configuration.GetSection("SimpleFileLogger:LogLevel");
-            //var reload = setting.GetReloadToken();
-            //reload.
-            var set = configuration.GetSection("SimpleFileLogger:LogLevel").GetChildren();
+            Set();
+            reload = ChangeToken.OnChange(() => this.configuration.GetReloadToken(), Set);
+
+        }
+        private void Set()
+        {
+            var set = configuration.GetSection("Logging:SimpleFileLogger:LogLevel").GetChildren();
+            if (!set.Any()) return;
             foreach (var item in set)
             {
                 var key = item.Key;
                 var value = item.Value;
                 if (key is null || value is null) continue;
-                var logLevel = (LogLevel)Enum.Parse(typeof(LogLevel), value);
-                option.Value.AddOrIgnore(LogType.File, key, logLevel);
+                if (Enum.TryParse(typeof(LogLevel), value, out var result) && result is LogLevel logLevel)
+                {
+                    option.Value.AddOrUpdate(LogType.File, key, logLevel);
+                }
             }
+            option.Value.NotifyChanged();
         }
         public ILogger CreateLogger(string categoryName)
         {
-            Console.WriteLine(categoryName);
             return loggers.GetOrAdd(categoryName, new InternalFileLogger(categoryName, option, fileLogger.Value));
         }
 
         public void Dispose()
         {
             loggers.Clear();
+            reload?.Dispose();
             GC.SuppressFinalize(this);
         }
     }

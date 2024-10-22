@@ -19,9 +19,18 @@ namespace MT.Toolkit.LogTool.FileLogger
             this.category = category;
             this.fileLogger = fileLogger;
             Setting = options.Value;
+            Setting.Changed += Setting_Changed;
             enableLevel = Setting.GetLogLevel(LogType.File, category);
         }
 
+        private void Setting_Changed()
+        {
+            enableLevel = Setting.GetLogLevel(LogType.File, category);
+        }
+        ~InternalFileLogger()
+        {
+            Setting.Changed -= Setting_Changed;
+        }
         private LoggerSetting Setting { get; set; }
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {

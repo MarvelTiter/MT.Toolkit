@@ -36,10 +36,10 @@ namespace MT.Toolkit.LogTool
             info.Add(category, logLevel);
         }
 
-        public static void AddOrIgnore(this LoggerSetting loggerSetting, LogType logType, string category, LogLevel logLevel)
+        public static void AddOrUpdate(this LoggerSetting loggerSetting, LogType logType, string category, LogLevel logLevel)
         {
             var info = loggerSetting.LogLimit[logType];
-            if (info.ContainsKey(category)) return;
+            if (info.ContainsKey(category)) info.Remove(category);
             info.Add(category, logLevel);
         }
 
@@ -48,22 +48,31 @@ namespace MT.Toolkit.LogTool
             var info = loggerSetting.LogLimit[logType];
             return info.GetLevel(category);
         }
+        public static void SetFileWriteLevel<T>(this IFileLoggerSetting loggerSetting, LogLevel logLevel)
+        {
+            loggerSetting.SetFileWriteLevel(typeof(T).FullName!, logLevel);
+        }
+        public static void SetDbWriteLevel<T>(this IDbLoggerSetting loggerSetting, LogLevel logLevel)
+        {
+            loggerSetting.SetDbWriteLevel(typeof(T).FullName!, logLevel);
+        }
     }
     public class LoggerSetting : IFileLoggerSetting, IDbLoggerSetting
     {
         private static readonly Lazy<LoggerSetting> setting = new(() => new());
         public static LoggerSetting Default => setting.Value;
         public string? LogDirectory { get; set; }
-
+        internal event Action? Changed;
+        internal void NotifyChanged()
+        {
+            Changed?.Invoke();
+        }
         #region FileLogger 
         public int FileSavedDays { get; set; } = 7;
         public string? LogFileFolder { get; set; }
         public long LogFileSize { get; set; } = 1 * 1024 * 1024;
         internal Func<LogInfo, bool> FileLogInfoFilter { get; set; } = _ => true;
-        public void SetFileWriteLevel<T>(LogLevel logLevel)
-        {
-            SetFileWriteLevel(typeof(T).FullName!, logLevel);
-        }
+
         public void SetFileWriteLevel(string category, LogLevel logLevel)
         {
             var info = LogLimit[LogType.File];
@@ -79,9 +88,11 @@ namespace MT.Toolkit.LogTool
         #region DbLogger
         internal Func<LogInfo, bool> DbLogInfoFilter { get; set; } = _ => true;
         internal Func<IDbLogger>? DbLoggerFacotry { get; set; }
-        public void SetDbWriteLevel(LogLevel logLevel)
-        {
 
+        public void SetDbWriteLevel(string category, LogLevel logLevel)
+        {
+            var info = LogLimit[LogType.Database];
+            info.Add(category, logLevel);
         }
         public void SetDbLogInfoFilter(Func<LogInfo, bool> filter)
         {

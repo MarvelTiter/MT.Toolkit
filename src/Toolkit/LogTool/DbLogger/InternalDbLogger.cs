@@ -13,18 +13,24 @@ namespace MT.Toolkit.LogTool.DbLogger
     internal class InternalDbLogger : ILogger
     {
         private readonly string category;
-        private readonly LogLevel enableLevel;
-        private readonly IOptions<LoggerSetting> options;
+        private LogLevel enableLevel;
         private readonly DatabaseLogger dbLogger;
 
         public InternalDbLogger(string category, IOptions<LoggerSetting> options, DatabaseLogger dbLogger)
         {
             this.category = category;
-            this.enableLevel = options.Value.GetLogLevel(LogType.Database, category);
-            this.options = options;
             this.dbLogger = dbLogger;
+            Setting = options.Value;
+            Setting.Changed += Setting_Changed;
+            this.enableLevel = Setting.GetLogLevel(LogType.Database, category);
         }
-        private LoggerSetting Setting => options.Value;
+
+        private void Setting_Changed()
+        {
+            this.enableLevel = Setting.GetLogLevel(LogType.Database, category);
+        }
+
+        private LoggerSetting Setting { get; }
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
             return default;
