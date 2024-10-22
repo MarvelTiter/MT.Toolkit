@@ -22,7 +22,7 @@ namespace MT.Toolkit.HttpHelper
         private readonly string requestNamespace;
         private readonly string responseNamespace;
         private bool disposedValue;
-
+        private HttpClient httpClient;
         private string EnvelopeNs
         {
             get
@@ -72,6 +72,7 @@ namespace MT.Toolkit.HttpHelper
             this.version = configuration.Version ?? SoapVersion.Soap11;
             this.requestNamespace = configuration.RequestNamespace ?? "http://tempuri.org/";
             this.responseNamespace = configuration.ResponseNamespace ?? "http://tempuri.org/";
+            this.httpClient = configuration.ClientProvider?.Invoke() ?? clientFactory.CreateClient();
         }
 
         public SoapService(IHttpClientFactory clientFactory, string url) : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/")
@@ -94,24 +95,21 @@ namespace MT.Toolkit.HttpHelper
             this.clientFactory = clientFactory;
             this.url = url;
             this.version = version;
-            this.requestNamespace = requestNamespace.EndsWith('/') ? requestNamespace : requestNamespace + '/';
-            this.responseNamespace = responseNamespace.EndsWith('/') ? requestNamespace : requestNamespace + '/';
+            this.requestNamespace = requestNamespace.EndsWith("/") ? requestNamespace : requestNamespace + '/';
+            this.responseNamespace = responseNamespace.EndsWith("/") ? requestNamespace : requestNamespace + '/';
+            this.httpClient = configuration?.ClientProvider?.Invoke() ?? clientFactory.CreateClient();
         }
 
-        private HttpClient GetClient(string methodName)
-        {
-            if (configuration?.ClientProvider == null)
-            {
-                return clientFactory.CreateClient();
-            }
-            return configuration.ClientProvider.Invoke(new ProviderContext(clientFactory, services, methodName));
-        }
+        //private HttpClient GetClient(string methodName)
+        //{
+        //    if (configuration?.ClientProvider == null)
+        //    {
+        //        return clientFactory.CreateClient();
+        //    }
+        //    return configuration.ClientProvider.Invoke(new ProviderContext(clientFactory, services, methodName));
+        //}
 
-        public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null)
-        {
-            var client = GetClient(methodName);
-            return SendAsync(client, methodName, args);
-        }
+        public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null) => SendAsync(httpClient, methodName, args);
 
         public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null)
         {

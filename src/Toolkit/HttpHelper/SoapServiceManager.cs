@@ -18,6 +18,10 @@ namespace MT.Toolkit.HttpHelper
             {
                 var c = new SoapServiceConfiguration();
                 config.Invoke(c);
+                if (string.IsNullOrEmpty(c.Url))
+                {
+                    throw new ArgumentNullException("AddSoapService Url is null");
+                }
                 configs[key] = c;
             }
             return this;

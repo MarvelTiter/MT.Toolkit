@@ -30,8 +30,7 @@ internal class DbLoggerProvider : ILoggerProvider
 
     IDbLogger GetDbLogger()
     {
-        var obj = serviceProvider.GetService<IDbLogger>();
-        ArgumentNullException.ThrowIfNull(obj);
+        var obj = serviceProvider.GetService<IDbLogger>() ?? throw new ArgumentNullException();
         return obj;
     }
 

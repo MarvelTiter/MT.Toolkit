@@ -8,6 +8,20 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 namespace MT.Toolkit.XmlHelper
 {
+#if NET462
+    public static class IDictionaryExtensions
+    {
+        public static bool TryAdd<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key, TValue value)
+        {
+            if (dic.ContainsKey(key))
+            {
+                return false;
+            }
+            dic.Add(key, value);
+            return true;
+        }
+    }
+#endif
     public static class XElementExtensions
     {
         public static dynamic AsDynamic(this XElement root)
