@@ -109,6 +109,23 @@ namespace MT.Toolkit.HttpHelper
         //    return configuration.ClientProvider.Invoke(new ProviderContext(clientFactory, services, methodName));
         //}
 
+        private static string FormatValue(object? value)
+        {
+            if (value is null)
+            {
+                return string.Empty;
+            }
+            if (value is byte[] bytes)
+            {
+                return Convert.ToBase64String(bytes);
+            }
+            if (value is DateTime date)
+            {
+                return date.ToString("yyyy-MM-ddTHH:mm:ss.fff");
+            }
+            return $"{value}";
+        }
+
         public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null) => SendAsync(httpClient, methodName, args);
 
         public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null)
@@ -118,7 +135,8 @@ namespace MT.Toolkit.HttpHelper
             {
                 foreach (var item in args)
                 {
-                    contentString.Append($"<{item.Key}><![CDATA[{item.Value}]]></{item.Key}>");
+                    
+                    contentString.Append($"<{item.Key}><![CDATA[{FormatValue(item.Value)}]]></{item.Key}>");
                 }
             }
             string content = $@"<soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"">
@@ -155,12 +173,12 @@ namespace MT.Toolkit.HttpHelper
                     namespaceManager.AddNamespace("r", responseNamespace);
                 }
                 var innerXml = doc.XPathSelectElement($"//soap:Body/r:{methodName}Response", namespaceManager)?.ToString();
-                return new SoapResponse(rawContent, innerXml, namespaceManager, methodName);
+                return new SoapResponse(content, rawContent, innerXml, namespaceManager, methodName);
 
             }
             catch (Exception ex)
             {
-                return new SoapResponse(ex);
+                return new SoapResponse(content, ex);
             }
         }
 

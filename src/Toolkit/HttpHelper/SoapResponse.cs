@@ -21,6 +21,10 @@ namespace MT.Toolkit.HttpHelper
         /// </summary>
         public bool Success { get; set; } = true;
         /// <summary>
+        /// 请求发生异常
+        /// </summary>
+        public Exception? Exception { get; set; }
+        /// <summary>
         /// 请求发生异常或解析返回数据时发生异常的异常信息
         /// </summary>
         public string? Message { get; set; }
@@ -29,22 +33,25 @@ namespace MT.Toolkit.HttpHelper
         private XmlNamespaceManager? nsManager;
         private readonly string? methodName;
 
-        internal SoapResponse(string? responseContent, string? rawValue, XmlNamespaceManager manager, string? methodName)
+        internal SoapResponse(string requestContent, string? responseContent, string? rawValue, XmlNamespaceManager manager, string? methodName)
         {
+            RequestContent = requestContent;
             this.responseContent = responseContent;
             xmlString = rawValue;
             nsManager = manager;
             this.methodName = methodName;
         }
 
-        internal SoapResponse(Exception ex)
+        internal SoapResponse(string requestContent, Exception ex)
         {
             Success = false;
+            RequestContent = requestContent;
+            Exception = ex;
             Message = ex.Message;
         }
         public string? RawContent => responseContent;
         public string? RawValue => xmlString?.Value;
-
+        public string RequestContent { get; }
         private XElement? retXml;
 
         #region 解析返回值

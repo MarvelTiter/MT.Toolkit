@@ -437,7 +437,7 @@ namespace WebServiceTest
             namespaceManager.AddNamespace("r", "http://risservice.hg-banner.com.cn/");
             var doc = XElement.Load(reader);
             var retVal = doc.XPathSelectElement("//soap:Body/r:GetDetailOFUserResponse", namespaceManager)?.ToString();
-            var response = new SoapResponse(responseXml, retVal, namespaceManager, "GetDetailOFUser");
+            var response = new SoapResponse("",responseXml, retVal, namespaceManager, "GetDetailOFUser");
             var ret = response.ReadReturnValue();
             var o = response.ReadParameterReturnValue();
 
