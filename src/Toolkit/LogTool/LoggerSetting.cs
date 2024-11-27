@@ -70,6 +70,7 @@ namespace MT.Toolkit.LogTool
         #region FileLogger 
         public int FileSavedDays { get; set; } = 7;
         public string? LogFileFolder { get; set; }
+        public bool SaveByCategory { get; set; }
         public long LogFileSize { get; set; } = 1 * 1024 * 1024;
         internal Func<LogInfo, bool> FileLogInfoFilter { get; set; } = _ => true;
 

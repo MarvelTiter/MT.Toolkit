@@ -80,18 +80,18 @@ namespace MT.Toolkit.LogTool
         {
             logQueue.Enqueue(new LogItem
             {
-                Path = GetLogPath(LogConfig),
+                Path = GetLogPath(LogConfig, logInfo.Category),
                 Content = logInfo.FormatLogMessage()
             });
         }
 
-        private static string GetLogPath(LoggerSetting setting)
+        private static string GetLogPath(LoggerSetting setting, string? category)
         {
             string newFilePath;
             var logDir = setting.LogFileFolder ?? Path.Combine(Environment.CurrentDirectory, "logs");
             Directory.CreateDirectory(logDir);
             string extension = ".log";
-            string fileNameNotExt = $"{DateTime.Now:yyyy-MM-dd}_Part";
+            string fileNameNotExt = !string.IsNullOrEmpty(category) && setting.SaveByCategory ? $"{DateTime.Now:yyyy-MM-dd}_{category}_Part" : $"{DateTime.Now:yyyy-MM-dd}_Part";
             string fileNamePattern = string.Concat(fileNameNotExt, "*", extension);
             string[] filePaths = Directory.GetFiles(logDir, fileNamePattern, SearchOption.TopDirectoryOnly);
 

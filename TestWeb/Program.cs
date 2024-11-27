@@ -9,6 +9,7 @@ builder.Services.AddRazorComponents()
 
 builder.Logging.AddLocalFileLogger(setting =>
 {
+    //setting.SaveByCategory = true;
     setting.SetFileWriteLevel<Counter>(LogLevel.Trace);
 });
 

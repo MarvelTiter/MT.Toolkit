@@ -21,6 +21,7 @@ namespace MT.Toolkit.LogTool.FileLogger
         /// 文件大小，默认1m
         /// </summary>
         long LogFileSize { get; set; }
+        public bool SaveByCategory { get; set; }
         /// <summary>
         /// 设置写入文件的日志级别
         /// </summary>
