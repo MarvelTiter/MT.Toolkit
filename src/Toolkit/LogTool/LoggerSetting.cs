@@ -62,10 +62,10 @@ namespace MT.Toolkit.LogTool
         private static readonly Lazy<LoggerSetting> setting = new(() => new());
         public static LoggerSetting Default => setting.Value;
         public string? LogDirectory { get; set; }
-        internal event Action? Changed;
-        internal void NotifyChanged()
+        internal event Action? LogLevelSettingChanged;
+        internal void NotifyLogLevelSettingChanged()
         {
-            Changed?.Invoke();
+            LogLevelSettingChanged?.Invoke();
         }
         #region FileLogger 
         public int FileSavedDays { get; set; } = 7;

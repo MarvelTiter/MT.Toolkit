@@ -14,6 +14,13 @@
     private void IncrementCount()
     {
         currentCount++;
-        Logger.LogInformation("测试");
+        using (var _1 = Logger.BeginScope("Scope1"))
+        {
+            using (var _2 = Logger.BeginScope("Scope2"))
+            {
+                Logger.LogInformation("测试");
+            }
+            Logger.LogInformation("测试");
+        }
     }
 }

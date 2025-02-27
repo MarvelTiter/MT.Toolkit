@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
+using System.Collections.Concurrent;
 
 namespace MT.Toolkit.HttpHelper
 {
@@ -10,7 +11,7 @@ namespace MT.Toolkit.HttpHelper
         private readonly IServiceProvider provider;
         private readonly ISoapServiceManager soapServiceManager;
         private readonly IHttpClientFactory httpClientFactory;
-
+        private readonly ConcurrentDictionary<string, SoapService> services = [];
         public SoapServiceProvider(IServiceProvider provider, ISoapServiceManager soapServiceManager, IHttpClientFactory httpClientFactory)
         {
             this.provider = provider;
@@ -29,18 +30,14 @@ namespace MT.Toolkit.HttpHelper
 
         public ISoapService GetSoapService(string key)
         {
-            var config = soapServiceManager.Configs[key];
-            //Func<string, HttpClient> factory;
-            //if (config.ClientProvider != null)
-            //{
-            //    factory = s => config.ClientProvider.Invoke(new ProviderContext(httpClientFactory, s));
-            //}
-            //else
-            //{
-            //    factory = s => httpClientFactory.CreateClient();
-            //}
-
-            return new SoapService(httpClientFactory, config, provider.GetService<ILogger<SoapService>>()!, provider);
+            return services.GetOrAdd(key, (name) =>
+             {
+                 if (soapServiceManager.Configs.TryGetValue(name, out var config))
+                 {
+                     return new SoapService(httpClientFactory, config);
+                 }
+                 throw new ArgumentNullException($"未注册SoapService[{name}]");
+             });
         }
     }
 }

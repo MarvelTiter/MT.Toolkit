@@ -12,17 +12,17 @@ namespace MT.Toolkit.HttpHelper
         public ConcurrentDictionary<string, SoapServiceConfiguration> Configs => configs;
         public string? DefaultKey => defaultKey;
 
-        public ISoapServiceManager AddSoapService(string key, Action<SoapServiceConfiguration> config)
+        public ISoapServiceManager AddSoapService(string name, Action<SoapServiceConfiguration> config)
         {
-            if (!configs.ContainsKey(key))
+            if (!configs.ContainsKey(name))
             {
-                var c = new SoapServiceConfiguration();
+                var c = new SoapServiceConfiguration(name);
                 config.Invoke(c);
                 if (string.IsNullOrEmpty(c.Url))
                 {
                     throw new ArgumentNullException("AddSoapService Url is null");
                 }
-                configs[key] = c;
+                configs[name] = c;
             }
             return this;
         }

@@ -18,6 +18,12 @@ namespace MT.Toolkit.HttpHelper
     //}
     public class SoapServiceConfiguration
     {
+        public SoapServiceConfiguration(string name)
+        {
+            Name = name;
+        }
+        public string Name { get; set; }
+        [Obsolete]
         public Func<HttpClient>? ClientProvider { get; set; }
         public string? Url { get; set; }
         public SoapVersion? Version { get; set; }

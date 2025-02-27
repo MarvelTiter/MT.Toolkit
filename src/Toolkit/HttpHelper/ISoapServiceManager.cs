@@ -7,6 +7,6 @@ namespace MT.Toolkit.HttpHelper
         internal ConcurrentDictionary<string, SoapServiceConfiguration> Configs { get; }
         internal string? DefaultKey {  get; }
         ISoapServiceManager SetDefault(string key);
-        ISoapServiceManager AddSoapService(string key, Action<SoapServiceConfiguration> config);
+        ISoapServiceManager AddSoapService(string name, Action<SoapServiceConfiguration> config);
     }
 }

@@ -26,7 +26,7 @@ namespace MT.Toolkit.LogTool.FileLogger
             this.configuration = configuration;
             Set();
             reload = ChangeToken.OnChange(() => this.configuration.GetReloadToken(), Set);
-
+            
         }
         private void Set()
         {
@@ -42,7 +42,7 @@ namespace MT.Toolkit.LogTool.FileLogger
                     option.Value.AddOrUpdate(LogType.File, key, logLevel);
                 }
             }
-            option.Value.NotifyChanged();
+            option.Value.NotifyLogLevelSettingChanged();
         }
         public ILogger CreateLogger(string categoryName)
         {

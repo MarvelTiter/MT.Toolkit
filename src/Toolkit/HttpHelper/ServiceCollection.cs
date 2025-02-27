@@ -15,7 +15,6 @@ namespace MT.Toolkit.HttpHelper
             services.AddSingleton<ISoapServiceFactory, SoapServiceProvider>();
             return services;
         }
-
     }
 }
 #endif

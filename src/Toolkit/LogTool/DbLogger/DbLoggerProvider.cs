@@ -49,7 +49,7 @@ internal class DbLoggerProvider : ILoggerProvider
                 option.Value.AddOrUpdate(LogType.File, key, logLevel);
             }
         }
-        option.Value.NotifyChanged();
+        option.Value.NotifyLogLevelSettingChanged();
     }
     IDbLogger GetDbLogger()
     {

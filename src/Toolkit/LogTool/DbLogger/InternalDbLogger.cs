@@ -15,13 +15,14 @@ namespace MT.Toolkit.LogTool.DbLogger
         private readonly string category;
         private LogLevel enableLevel;
         private readonly DatabaseLogger dbLogger;
+        private readonly LoggerExternalScopeProvider scopeProvider = new LoggerExternalScopeProvider();
 
         public InternalDbLogger(string category, IOptions<LoggerSetting> options, DatabaseLogger dbLogger)
         {
             this.category = category;
             this.dbLogger = dbLogger;
             Setting = options.Value;
-            Setting.Changed += Setting_Changed;
+            Setting.LogLevelSettingChanged += Setting_Changed;
             this.enableLevel = Setting.GetLogLevel(LogType.Database, category);
         }
 
@@ -33,7 +34,7 @@ namespace MT.Toolkit.LogTool.DbLogger
         private LoggerSetting Setting { get; }
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
-            return default;
+            return scopeProvider.Push(state);
         }
 
         public bool IsEnabled(LogLevel logLevel)
@@ -58,6 +59,7 @@ namespace MT.Toolkit.LogTool.DbLogger
                 Category = category,
                 Exception = exception
             };
+            scopeProvider.ForEachScope((scope, list) => list.Add(scope), logInfo.Scopes);
             if (Setting.DbLogInfoFilter(logInfo))
             {
                 dbLogger.WriteLog(logInfo);
