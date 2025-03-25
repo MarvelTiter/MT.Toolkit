@@ -46,7 +46,7 @@ internal class DbLoggerProvider : ILoggerProvider
             if (key is null || value is null) continue;
             if (Enum.TryParse(typeof(LogLevel), value, out var result) && result is LogLevel logLevel)
             {
-                option.Value.AddOrUpdate(LogType.File, key, logLevel);
+                option.Value.AddOrUpdate(LogType.Database, key, logLevel);
             }
         }
         option.Value.NotifyLogLevelSettingChanged();

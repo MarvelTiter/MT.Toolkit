@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using MT.Toolkit.LogTool.DbLogger;
 using MT.Toolkit.LogTool.FileLogger;
 using System;
+using System.Security.Claims;
 
 namespace MT.Toolkit.LogTool
 {
@@ -35,6 +36,16 @@ namespace MT.Toolkit.LogTool
         public static ILoggingBuilder AddDbLogger(this ILoggingBuilder builder, Action<IDbLoggerSetting>? config = null)
         {
             config ??= c => { };
+            builder.Services.Configure<LoggerSetting>(config);
+            builder.Services.AddSingleton<ILoggerProvider, DbLoggerProvider>();
+            return builder;
+        }
+
+        public static ILoggingBuilder AddDbLogger<TDbLogger>(this ILoggingBuilder builder, Action<IDbLoggerSetting>? config = null)
+            where TDbLogger : class, IDbLogger
+        {
+            config ??= c => { };
+            builder.Services.AddScoped<IDbLogger, TDbLogger>();
             builder.Services.Configure<LoggerSetting>(config);
             builder.Services.AddSingleton<ILoggerProvider, DbLoggerProvider>();
             return builder;

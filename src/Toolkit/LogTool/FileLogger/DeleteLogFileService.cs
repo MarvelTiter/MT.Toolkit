@@ -12,26 +12,23 @@ namespace MT.Toolkit.LogTool.FileLogger
 {
     internal class DeleteLogFileService(IOptionsMonitor<LoggerSetting> config) : BackgroundService
     {
-        private readonly int? savedDays = config.CurrentValue.FileSavedDays;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (!savedDays.HasValue)
-            {
-                return ;
-            }
-
-            if (savedDays.Value < 0)
-            {
-                return ;
-            }
-
             while (!stoppingToken.IsCancellationRequested)
             {
+                int? savedDays = config.CurrentValue.FileSavedDays;
+                if (!savedDays.HasValue || savedDays.Value < 0)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                    continue;
+                }
+
                 var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
                 if (!Directory.Exists(logPath))
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                    continue;
                 }
                 try
                 {
