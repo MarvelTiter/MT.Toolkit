@@ -30,7 +30,7 @@ namespace MT.Toolkit.LogTool.FileLogger
         }
         private void Set()
         {
-            var set = configuration.GetSection("Logging:SimpleFileLogger:LogLevel").GetChildren();
+            var set = configuration.GetSection("Logging:SimpleFileLogger").GetChildren();
             if (!set.Any()) return;
             foreach (var item in set)
             {

@@ -37,7 +37,7 @@ internal class DbLoggerProvider : ILoggerProvider
     }
     private void Set()
     {
-        var set = configuration.GetSection("Logging:SimpleDatabaseLogger:LogLevel").GetChildren();
+        var set = configuration.GetSection("Logging:SimpleDatabaseLogger").GetChildren();
         if (!set.Any()) return;
         foreach (var item in set)
         {
