@@ -9,6 +9,9 @@ using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Xml;
 using System.Xml.XPath;
+using System.IO;
+using System.Linq;
+using MT.Toolkit.XmlHelper;
 namespace MT.Toolkit.HttpHelper;
 
 public class SoapService : ISoapService//, IDisposable
@@ -35,6 +38,18 @@ public class SoapService : ISoapService//, IDisposable
             }
 
             return "http://www.w3.org/2003/05/soap-envelope";
+        }
+    }
+
+    private string NpAlia
+    {
+        get
+        {
+            if (Version != SoapVersion.Soap12)
+            {
+                return "soap";
+            }
+            return "soap12";
         }
     }
 
@@ -141,6 +156,7 @@ public class SoapService : ISoapService//, IDisposable
             client.DefaultRequestHeaders.Remove("SOAPAction");
             client.DefaultRequestHeaders.Add("SOAPAction", $"{RequestNamespace}{methodName}");
         }
+        string? rawContent = null;
         HttpContent httpContent = new StringContent(content, Encoding.UTF8, HttpContentType);
         try
         {
@@ -150,44 +166,89 @@ public class SoapService : ISoapService//, IDisposable
             HttpResponseMessage response = await client.PostAsync(Url, httpContent).ConfigureAwait(false);
             // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
             var result = await response.Content.ReadAsStreamAsync();
-            var rawContent = await response.Content.ReadAsStringAsync();
+            rawContent = await response.Content.ReadAsStringAsync();
             // 解析内容
             //using var reader = new StringReader(result);
             using var xmlReader = XmlReader.Create(result);
             var doc = XDocument.Load(xmlReader);
             XmlNameTable nameTable = xmlReader.NameTable;
             XmlNamespaceManager namespaceManager = new XmlNamespaceManager(nameTable);
-            namespaceManager.AddNamespace("soap", EnvelopeNs);
+            namespaceManager.AddNamespace(NpAlia, EnvelopeNs);
             if (!string.IsNullOrEmpty(ResponseNamespace))
             {
-                namespaceManager.AddNamespace("r", ResponseNamespace);
+                namespaceManager.AddNamespace(SoapResponse.RN_ALIAS, ResponseNamespace);
             }
-            var innerXml = doc.XPathSelectElement($"//soap:Body/r:{methodName}Response", namespaceManager)?.ToString();
-            return new SoapResponse(content, rawContent, innerXml, namespaceManager, methodName);
+            if (IsSoapFault(rawContent, EnvelopeNs))
+            {
+                //异常处理
+                throw ParseSoapFault(doc, EnvelopeNs, Version, namespaceManager);
+            }
+            else
+            {
+                var innerXml = doc.XPathSelectElement($"//{NpAlia}:Body/{SoapResponse.RN_ALIAS}:{methodName}Response", namespaceManager)?.ToString();
+                return new SoapResponse(content, rawContent, innerXml, namespaceManager, methodName);
+            }
         }
         catch (Exception ex)
         {
-            return new SoapResponse(content, ex);
+            return new SoapResponse(content, rawContent, ex);
         }
     }
 
-    //protected virtual void Dispose(bool disposing)
-    //{
-    //    if (!disposedValue)
-    //    {
-    //        if (disposing)
-    //        {
-    //            httpClient.Dispose();
-    //        }
+    internal static bool IsSoapFault(string content, string envelopeNs)
+    {
+        return content.Contains("<soap:Fault>") ||
+               content.Contains("<soapenv:Fault>") ||
+               content.Contains("<soap12:Fault>") ||
+               content.Contains($"<Fault xmlns=\"{envelopeNs}\"");
+    }
 
-    //        disposedValue = true;
-    //    }
-    //}
+    internal static SoapFaultException ParseSoapFault(XDocument doc, string envelopeNs, SoapVersion version, IXmlNamespaceResolver resolver)
+    {
+        try
+        {
+            XNamespace ns = envelopeNs;
+            var fault = doc.Descendants(ns + "Fault").FirstOrDefault();
 
-    //public void Dispose()
-    //{
-    //    // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-    //    Dispose(disposing: true);
-    //    GC.SuppressFinalize(this);
-    //}
+            if (fault == null)
+            {
+                return new SoapFaultException(
+                    "SOAP Fault (unable to parse details)",
+                    "Unknown",
+                    "Unparseable SOAP Fault");
+            }
+
+            if (version == SoapVersion.Soap12)
+            {
+                // SOAP 1.2 Fault结构
+                var code = doc.XPathSelectElement($"//Code", resolver)?.ToString();
+                var reason = doc.XPathSelectElement($"//Reason", resolver)?.ToString();
+                var detail = doc.XPathSelectElement($"//Detail", resolver)?.ToString();
+
+                return new SoapFaultException(
+                    code,
+                    reason,
+                    detail);
+            }
+            else
+            {
+                // SOAP 1.1 Fault结构
+                var faultCode = doc.XPathSelectElement($"//faultcode", resolver)?.Value;
+                var faultString = doc.XPathSelectElement($"//faultstring", resolver)?.Value;
+                var faultDetail = doc.XPathSelectElement($"//detail", resolver)?.Value;
+
+                return new SoapFaultException(
+                    faultCode,
+                    faultString,
+                    faultDetail);
+            }
+        }
+        catch (Exception ex)
+        {
+            return new SoapFaultException(
+                "SOAP Fault (parsing failed)",
+                "ParseError",
+                ex.Message);
+        }
+    }
 }

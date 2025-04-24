@@ -16,12 +16,13 @@ namespace MT.Toolkit.HttpHelper
 {
     public sealed class SoapResponse
     {
+        public const string RN_ALIAS = "r";
         /// <summary>
         /// 请求是否发送成功
         /// </summary>
         public bool Success { get; set; } = true;
         /// <summary>
-        /// 请求发生异常
+        /// 请求发生异常时的异常
         /// </summary>
         public Exception? Exception { get; set; }
         /// <summary>
@@ -42,10 +43,11 @@ namespace MT.Toolkit.HttpHelper
             this.methodName = methodName;
         }
 
-        internal SoapResponse(string requestContent, Exception ex)
+        internal SoapResponse(string requestContent,string? responseContent, Exception ex)
         {
             Success = false;
             RequestContent = requestContent;
+            this.responseContent = responseContent;
             Exception = ex;
             Message = ex.Message;
         }
@@ -65,14 +67,14 @@ namespace MT.Toolkit.HttpHelper
             var type = typeof(T);
             if (type != typeof(object))
             {
-                var str = xmlString?.GetValue($"//r:{methodName}Result", nsManager);
+                var str = xmlString?.GetValue($"//{RN_ALIAS}:{methodName}Result", nsManager);
                 if (string.IsNullOrEmpty(str)) return default;
                 var ret = Convert.ChangeType(str, typeof(T));
                 if (ret == null) return default;
                 return (T?)ret;
             }
             // 序列化返回的结果
-            return GetNode($"//r:{methodName}Result")?.AsDynamic();
+            return GetNode($"//{RN_ALIAS}:{methodName}Result")?.AsDynamic();
         }
         /// <summary>
         /// 接口签名中return的内容
@@ -89,7 +91,7 @@ namespace MT.Toolkit.HttpHelper
         {
             if (retXml == null)
             {
-                var raw = GetValue($"//r:{methodName}Result");
+                var raw = GetValue($"//{RN_ALIAS}:{methodName}Result");
                 if (raw != null)
                 {
                     using var reader = new StringReader(raw);
@@ -106,7 +108,7 @@ namespace MT.Toolkit.HttpHelper
         public DataTable ReadReturnValueAsDataTable()
         {
             nsManager?.AddNamespace("xs", "http://www.w3.org/2001/XMLSchema");
-            var xml = xmlString?.GetElement($"//r:{methodName}Result", nsManager);
+            var xml = xmlString?.GetElement($"//{RN_ALIAS}:{methodName}Result", nsManager);
             var schema = xml.GetChildElements("//xs:sequence", nsManager);
             var datas = xml.GetChildElements("//DocumentElement", nsManager);
             return CreateDataTable(schema, datas, nsManager);
@@ -149,7 +151,7 @@ namespace MT.Toolkit.HttpHelper
         /// <returns></returns>
         public XElement? ReadParameterReturnValueAsXml(string? name = null)
         {
-            var outParams = xmlString?.GetElementsAfterSelf($"r:{methodName}Result", nsManager);
+            var outParams = xmlString?.GetElementsAfterSelf($"{RN_ALIAS}:{methodName}Result", nsManager);
             XElement? outParam = outParams?.FirstOrDefault(x =>
             {
                 if (string.IsNullOrEmpty(name)) return true;

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+ï»¿using Microsoft.Extensions.DependencyInjection;
 using SimpleSOAPClient.Exceptions;
 using SimpleSOAPClient.Handlers;
 using SimpleSOAPClient.Models;
@@ -18,7 +18,7 @@ namespace WebServiceTest
 {
     public class UnitTest1
     {
-      
+
         [Fact]
         public async void ServiceCollectionTest()
         {
@@ -153,7 +153,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:59:19+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>µ×ÅÌ¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>åº•ç›˜æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -173,7 +173,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>ÁªÍø²éÑ¯¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>è”ç½‘æŸ¥è¯¢æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -193,7 +193,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>ÁªÍø²éÑ¯¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>è”ç½‘æŸ¥è¯¢æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -213,7 +213,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>Î¨Ò»ĞÔ¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>å”¯ä¸€æ€§æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -233,7 +233,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>Î¨Ò»ĞÔ¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>å”¯ä¸€æ€§æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -254,7 +254,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:59:19+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>µ×ÅÌ¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>åº•ç›˜æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -273,7 +273,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>ÁªÍø²éÑ¯¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>è”ç½‘æŸ¥è¯¢æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -292,7 +292,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:04+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>ÁªÍø²éÑ¯¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>è”ç½‘æŸ¥è¯¢æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -311,7 +311,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>Î¨Ò»ĞÔ¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>å”¯ä¸€æ€§æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -330,7 +330,7 @@ namespace WebServiceTest
                                             <JSSJ>2024-06-06T10:57:26+08:00</JSSJ>
                                             <ZDXZ>0</ZDXZ>
                                             <JCZBH>3701000098</JCZBH>
-                                            <JYXMNAME>Î¨Ò»ĞÔ¼ìÑé</JYXMNAME>
+                                            <JYXMNAME>å”¯ä¸€æ€§æ£€éªŒ</JYXMNAME>
                                             <LXIP>172.37.90.2 </LXIP>
                                             <LXPORT>8092 </LXPORT>
                                             <STATIONIP>172.37.90.2</STATIONIP>
@@ -413,10 +413,10 @@ namespace WebServiceTest
                     <DocumentElement xmlns="""">
                         <ds diffgr:id=""ds1"" msdata:rowOrder=""0"">
                             <USR_ID>admin </USR_ID>
-                            <USR_NAME>¹ÜÀíÔ± </USR_NAME>
+                            <USR_NAME>ç®¡ç†å‘˜ </USR_NAME>
                             <USR_IDENTITY>000000000000000000</USR_IDENTITY>
                             <STN_ID>4401000081</STN_ID>
-                            <STN_NAME>¼ì²â·şÎñÓĞÏŞ¹«Ë¾</STN_NAME>
+                            <STN_NAME>æ£€æµ‹æœåŠ¡æœ‰é™å…¬å¸</STN_NAME>
                             <GRP_ID>G001</GRP_ID>
                             <USR_ENABLE>1</USR_ENABLE>
                             <USR_DEADLINE>2101-03-31T00:00:00+08:00</USR_DEADLINE>
@@ -437,20 +437,42 @@ namespace WebServiceTest
             namespaceManager.AddNamespace("r", "http://risservice.hg-banner.com.cn/");
             var doc = XElement.Load(reader);
             var retVal = doc.XPathSelectElement("//soap:Body/r:GetDetailOFUserResponse", namespaceManager)?.ToString();
-            var response = new SoapResponse("",responseXml, retVal, namespaceManager, "GetDetailOFUser");
+            var response = new SoapResponse("", responseXml, retVal, namespaceManager, "GetDetailOFUser");
             var ret = response.ReadReturnValue();
             var o = response.ReadParameterReturnValue();
 
             Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_ID == "admin ");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_NAME == "¹ÜÀíÔ± ");
+            Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_NAME == "ç®¡ç†å‘˜ ");
             Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_IDENTITY == "000000000000000000");
             Assert.True(o?.diffgram?.DocumentElement?.ds?.STN_ID == "4401000081");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.STN_NAME == "¼ì²â·şÎñÓĞÏŞ¹«Ë¾");
+            Assert.True(o?.diffgram?.DocumentElement?.ds?.STN_NAME == "æ£€æµ‹æœåŠ¡æœ‰é™å…¬å¸");
             Assert.True(o?.diffgram?.DocumentElement?.ds?.GRP_ID == "G001");
             Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_ENABLE == "1");
             Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_DEADLINE == "2101-03-31T00:00:00+08:00");
             Assert.True(o?.diffgram?.DocumentElement?.ds?.PSW_DEADLINE == "2025-12-31T00:00:00+08:00");
 
+        }
+
+        [Fact]
+        public void TestFault()
+        {
+            var response = """
+                <?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body><soap:Fault><faultcode>soap:Server</faultcode><faultstring>Server was unable to process request. ---&gt; There was an error generating the XML document. ---&gt; Cannot serialize the DataTable. DataTable name is not set.</faultstring><detail /></soap:Fault></soap:Body></soap:Envelope>
+                """;
+
+            var ns = "http://schemas.xmlsoap.org/soap/envelope/";
+            var alias = "soap";
+            var fault = SoapService.IsSoapFault(response, ns);
+            Assert.True(fault == true);
+            var tr = new StringReader(response);
+            using var xmlReader = XmlReader.Create(tr);
+            var doc = XDocument.Load(xmlReader);
+            XmlNameTable nameTable = xmlReader.NameTable;
+            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(nameTable);
+            namespaceManager.AddNamespace(alias, ns);
+            var ex = SoapService.ParseSoapFault(doc, ns, SoapVersion.Soap11, namespaceManager);
+            Assert.True(ex.FaultCode == "soap:Server");
+            Assert.True(ex.FaultString == "Server was unable to process request. ---> There was an error generating the XML document. ---> Cannot serialize the DataTable. DataTable name is not set.");
         }
     }
 }
