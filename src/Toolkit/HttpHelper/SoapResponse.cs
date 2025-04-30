@@ -151,7 +151,7 @@ namespace MT.Toolkit.HttpHelper
         /// <returns></returns>
         public XElement? ReadParameterReturnValueAsXml(string? name = null)
         {
-            var outParams = xmlString?.GetElementsAfterSelf($"{RN_ALIAS}:{methodName}Result", nsManager);
+            var outParams = xmlString?.GetElementsAfterSelf($"//{RN_ALIAS}:{methodName}Result", nsManager);
             XElement? outParam = outParams?.FirstOrDefault(x =>
             {
                 if (string.IsNullOrEmpty(name)) return true;

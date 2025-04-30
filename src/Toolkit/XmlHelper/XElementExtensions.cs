@@ -26,34 +26,44 @@ namespace MT.Toolkit.XmlHelper
     {
         public static dynamic AsDynamic(this XElement root)
         {
-            var ret = new ExpandoObject();
-            var values = new Dictionary<string, List<object>>();
+            object? value = InternalConvert(root);
+            var node = new ExpandoObject();
+            node.TryAdd(root.Name.LocalName, value);
+            return node;
+        }
+
+        private static dynamic InternalConvert(XElement root)
+        {
+            var node = new ExpandoObject();
+            IDictionary<string, object?> nodeValues = new ExpandoObject();
+            //XElement[] elements = [.. root.Elements()];
             foreach (var p in root.Elements())
             {
                 var key = p.Name.LocalName;
                 object? val;
                 if (p.Elements().Any())
                 {
-                    val = p.AsDynamic();
+                    val = InternalConvert(p);
                 }
                 else
                 {
                     val = p.Value;
                 }
-                if (!values.TryGetValue(key, out var list))
+                if (!nodeValues.TryGetValue(key, out var list))
                 {
                     list = new List<object>();
-                    values[key] = list;
+                    nodeValues[key] = list;
                 }
-                list.Add(val);
+                ((List<object>)list!).Add(val);
             }
 
-            foreach (var item in values)
+            foreach (var item in nodeValues)
             {
-                var v = item.Value.Count > 1 ? item.Value : item.Value[0];
-                ret.TryAdd(item.Key, v);
+                var val = (List<object>)item.Value!;
+                var v = val.Count > 1 ? val : val[0];
+                node.TryAdd(item.Key, v);
             }
-            return ret;
+            return node;
         }
 
         public static string? GetValue(this XElement? element, string path, XmlNamespaceManager? nsManager = null)

@@ -67,8 +67,8 @@ namespace WebServiceTest
         [Fact]
         public void ToDataTable()
         {
-            string xml = """
-                                <?xml version="1.0" encoding="utf-8"?>
+            string responseXml = """
+                <?xml version="1.0" encoding="utf-8"?>
                 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                     xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -343,7 +343,17 @@ namespace WebServiceTest
                     </soap:Body>
                 </soap:Envelope>
                 """;
-
+            using var stringReader = new StringReader(responseXml);
+            var reader = XmlReader.Create(stringReader);
+            XmlNameTable nameTable = reader.NameTable;
+            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(nameTable);
+            namespaceManager.AddNamespace("soap", "http://schemas.xmlsoap.org/soap/envelope/");
+            namespaceManager.AddNamespace("r", "http://risservice.hg-banner.com.cn/");
+            var doc = XElement.Load(reader);
+            var retVal = doc.XPathSelectElement("//soap:Body/r:GetMutimeDiaByPlateResponse", namespaceManager)?.ToString();
+            var response = new SoapResponse("", responseXml, retVal, namespaceManager, "GetMutimeDiaByPlate");
+            var dt = response.ReadReturnValueAsDataTable();
+            var d = response.ReadReturnValue();
         }
 
         [Fact]
@@ -440,16 +450,16 @@ namespace WebServiceTest
             var response = new SoapResponse("", responseXml, retVal, namespaceManager, "GetDetailOFUser");
             var ret = response.ReadReturnValue();
             var o = response.ReadParameterReturnValue();
-
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_ID == "admin ");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_NAME == "管理员 ");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_IDENTITY == "000000000000000000");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.STN_ID == "4401000081");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.STN_NAME == "检测服务有限公司");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.GRP_ID == "G001");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_ENABLE == "1");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.USR_DEADLINE == "2101-03-31T00:00:00+08:00");
-            Assert.True(o?.diffgram?.DocumentElement?.ds?.PSW_DEADLINE == "2025-12-31T00:00:00+08:00");
+            var dt = response.ReadParameterReturnValueAsDataTable();
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.USR_ID == "admin ");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.USR_NAME == "管理员 ");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.USR_IDENTITY == "000000000000000000");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.STN_ID == "4401000081");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.STN_NAME == "检测服务有限公司");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.GRP_ID == "G001");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.USR_ENABLE == "1");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.USR_DEADLINE == "2101-03-31T00:00:00+08:00");
+            Assert.True(o?.SystemDt?.diffgram?.DocumentElement?.ds?.PSW_DEADLINE == "2025-12-31T00:00:00+08:00");
 
         }
 
@@ -473,6 +483,41 @@ namespace WebServiceTest
             var ex = SoapService.ParseSoapFault(doc, ns, SoapVersion.Soap11, namespaceManager);
             Assert.True(ex.FaultCode == "soap:Server");
             Assert.True(ex.FaultString == "Server was unable to process request. ---> There was an error generating the XML document. ---> Cannot serialize the DataTable. DataTable name is not set.");
+        }
+
+        [Fact]
+        public void XmlTest()
+        {
+            XmlString content = """
+                <root><head><returncode>100</returncode> <reason>获取检测信息成功！</reason></head><Vehicle><Row_Detect><JYLSH>23013101902000537</JYLSH><JYCS>2</JYCS><DLSJ>2023/1/31 10:02:09</DLSJ><DLY>黄敏华</DLY><JYXM>F1</JYXM><UNDOJYXM></UNDOJYXM><KSSJ>2023/1/31 10:02:10</KSSJ><JSSJ>2023/1/31 10:08:14</JSSJ><PROCESS>&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;2&lt;/JYCS&gt;&lt;JYXM&gt;F1&lt;/JYXM&gt;&lt;JYXMNAME&gt;车辆外观检验&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 10:03:37&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 10:07:44&lt;/JSSJ&gt;&lt;/Row_Process&gt;</PROCESS></Row_Detect><Row_Detect><JYLSH>23013101902000537</JYLSH><JYCS>1</JYCS><DLSJ>2023/1/31 9:01:06</DLSJ><DLY>权正梁</DLY><JYXM>F1,NQ,UC,C1,DC,B1,B2,B0,H1,H4</JYXM><UNDOJYXM></UNDOJYXM><KSSJ>2023/1/31 9:01:06</KSSJ><JSSJ>2023/1/31 9:31:53</JSSJ><PROCESS>&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;B0&lt;/JYXM&gt;&lt;JYXMNAME&gt;驻车制动&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:30:54&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:31:17&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;B2&lt;/JYXM&gt;&lt;JYXMNAME&gt;二轴制动&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:30:22&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:30:50&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;B1&lt;/JYXM&gt;&lt;JYXMNAME&gt;一轴制动&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:29:20&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:29:47&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;H4&lt;/JYXM&gt;&lt;JYXMNAME&gt;右外灯或二三轮机动车的右灯&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:26:28&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:27:01&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;H1&lt;/JYXM&gt;&lt;JYXMNAME&gt;左外灯或二三轮机动车的左灯&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:26:27&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:27:01&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;DC&lt;/JYXM&gt;&lt;JYXMNAME&gt;底盘动态检验&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:08:56&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:10:00&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;C1&lt;/JYXM&gt;&lt;JYXMNAME&gt;底盘检验&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:06:07&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:06:51&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;F1&lt;/JYXM&gt;&lt;JYXMNAME&gt;车辆外观检验&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:01:59&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:05:43&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;UC&lt;/JYXM&gt;&lt;JYXMNAME&gt;唯一性检验&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:01:27&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:01:50&lt;/JSSJ&gt;&lt;/Row_Process&gt;&lt;Row_Process&gt;&lt;JYLSH&gt;23013101902000537&lt;/JYLSH&gt;&lt;JYCS&gt;1&lt;/JYCS&gt;&lt;JYXM&gt;NQ&lt;/JYXM&gt;&lt;JYXMNAME&gt;联网查询检验&lt;/JYXMNAME&gt;&lt;KSSJ&gt;2023/1/31 9:01:09&lt;/KSSJ&gt;&lt;JSSJ&gt;2023/1/31 9:01:24&lt;/JSSJ&gt;&lt;/Row_Process&gt;</PROCESS></Row_Detect></Vehicle></root>
+                """;
+            var d = content.AsDynamic();
+            if (d?.root.Vehicle.Row_Detect is IEnumerable<dynamic> dataArray)
+            {
+                foreach (var item in dataArray)
+                {
+                    XmlString p = item.PROCESS;
+                    var dd = p.AsDynamic();
+                    var rp = dd?.root.Row_Process;
+                    if (rp is IEnumerable<dynamic> ps)
+                    {
+                        foreach (var pr in ps)
+                        {
+                            Console.WriteLine(pr.JYLSH);
+                            Console.WriteLine(pr.JYCS);
+                            Console.WriteLine(pr.JYXMNAME);
+                            Console.WriteLine(pr.JSSJ);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine(rp.JYLSH);
+                        Console.WriteLine(rp.JYCS);
+                        Console.WriteLine(rp.JYXMNAME);
+                        Console.WriteLine(rp.JSSJ);
+                    }
+                }
+            }
         }
     }
 }
