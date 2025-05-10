@@ -22,6 +22,7 @@ public class SoapService : ISoapService//, IDisposable
     private readonly string? requestNamespace;
     private readonly string? responseNamespace;
     private readonly SoapServiceConfiguration? configuration;
+    private HttpClient? httpClient;
     //private bool disposedValue;
 
     private string Url => configuration?.Url ?? url ?? throw new ArgumentNullException();
@@ -127,10 +128,13 @@ public class SoapService : ISoapService//, IDisposable
         }
         return $"{value}";
     }
-
+    public void SetHttpClient(HttpClient client)
+    {
+        httpClient = client;
+    }
     public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null)
     {
-        var client = clientFactory.CreateClient(configuration?.Name ?? "");
+        var client = httpClient ?? clientFactory.CreateClient(configuration?.Name ?? "");
         return SendAsync(client, methodName, args);
     }
 
@@ -163,7 +167,7 @@ public class SoapService : ISoapService//, IDisposable
             //Stopwatch sw = Stopwatch.StartNew();
             //sw.Stop();
             //logger?.LogError($"SOAP Action: {methodName}, Elapsed {sw.ElapsedMilliseconds} ms");
-            HttpResponseMessage response = await client.PostAsync(Url, httpContent).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.PostAsync(Url, httpContent).ConfigureAwait(false);
             // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
             var result = await response.Content.ReadAsStreamAsync();
             rawContent = await response.Content.ReadAsStringAsync();
@@ -251,4 +255,5 @@ public class SoapService : ISoapService//, IDisposable
                 ex.Message);
         }
     }
+
 }
