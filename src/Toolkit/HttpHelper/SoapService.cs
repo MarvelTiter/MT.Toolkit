@@ -3,15 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using System.Diagnostics;
-
-using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Xml;
 using System.Xml.XPath;
-using System.IO;
 using System.Linq;
-using MT.Toolkit.XmlHelper;
+using System.Threading;
 namespace MT.Toolkit.HttpHelper;
 
 public class SoapService : ISoapService//, IDisposable
@@ -88,17 +84,17 @@ public class SoapService : ISoapService//, IDisposable
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url) 
+    public SoapService(IHttpClientFactory clientFactory, string url)
         : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/")
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, string @namespace) 
+    public SoapService(IHttpClientFactory clientFactory, string url, string @namespace)
         : this(clientFactory, url, SoapVersion.Soap11, @namespace)
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string @namespace) 
+    public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string @namespace)
         : this(clientFactory, url, version, @namespace, @namespace)
     {
     }
@@ -133,12 +129,12 @@ public class SoapService : ISoapService//, IDisposable
     {
         httpClient = client;
     }
-    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null)
+    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        return SendAsync(httpClient, methodName, args);
+        return SendAsync(httpClient, methodName, args, cancellationToken);
     }
 
-    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null)
+    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         StringBuilder contentString = new StringBuilder();
         if (args != null)
@@ -155,19 +151,20 @@ public class SoapService : ISoapService//, IDisposable
                      </{methodName}>
                  </soapenv:Body>
               </soapenv:Envelope>";
-        if (Version == SoapVersion.Soap11)
-        {
-            client.DefaultRequestHeaders.Remove("SOAPAction");
-            client.DefaultRequestHeaders.Add("SOAPAction", $"{RequestNamespace}{methodName}");
-        }
+
         string? rawContent = null;
         HttpContent httpContent = new StringContent(content, Encoding.UTF8, HttpContentType);
         try
         {
-            //Stopwatch sw = Stopwatch.StartNew();
-            //sw.Stop();
-            //logger?.LogError($"SOAP Action: {methodName}, Elapsed {sw.ElapsedMilliseconds} ms");
-            using HttpResponseMessage response = await client.PostAsync(Url, httpContent).ConfigureAwait(false);
+            using HttpRequestMessage request = new (HttpMethod.Post, Url)
+            {
+                Content = httpContent
+            };
+            if (Version == SoapVersion.Soap11)
+            {
+                request.Headers.Add("SOAPAction", $"{RequestNamespace}{methodName}");
+            }
+            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
             // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
             var result = await response.Content.ReadAsStreamAsync();
             rawContent = await response.Content.ReadAsStringAsync();
