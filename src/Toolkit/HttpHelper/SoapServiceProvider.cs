@@ -12,6 +12,8 @@ namespace MT.Toolkit.HttpHelper
         private readonly ISoapServiceManager soapServiceManager;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly ConcurrentDictionary<string, SoapService> services = [];
+        private bool disposedValue;
+
         public SoapServiceProvider(IServiceProvider provider, ISoapServiceManager soapServiceManager, IHttpClientFactory httpClientFactory)
         {
             this.provider = provider;
@@ -38,6 +40,33 @@ namespace MT.Toolkit.HttpHelper
                  }
                  throw new ArgumentNullException($"未注册SoapService[{name}]");
              });
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    foreach (var item in services.Values)
+                    {
+                        item.Dispose();
+                    }
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        ~SoapServiceProvider()
+        {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -16,14 +16,14 @@ namespace MT.Toolkit.HttpHelper;
 
 public class SoapService : ISoapService//, IDisposable
 {
-    private readonly IHttpClientFactory clientFactory;
+    //private readonly IHttpClientFactory clientFactory;
     private readonly string? url;
     private readonly SoapVersion? version;
     private readonly string? requestNamespace;
     private readonly string? responseNamespace;
     private readonly SoapServiceConfiguration? configuration;
-    private HttpClient? httpClient;
-    //private bool disposedValue;
+    private HttpClient httpClient;
+    private bool disposedValue;
 
     private string Url => configuration?.Url ?? url ?? throw new ArgumentNullException();
     private SoapVersion Version => configuration?.Version ?? version ?? SoapVersion.Soap11;
@@ -82,34 +82,35 @@ public class SoapService : ISoapService//, IDisposable
 
     public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration)
     {
-        this.clientFactory = clientFactory;
+        //this.clientFactory = clientFactory;
         this.configuration = configuration;
+        this.httpClient = clientFactory.CreateClient(configuration.Name);
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url) : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/")
+    public SoapService(IHttpClientFactory clientFactory, string url) 
+        : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/")
     {
-
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, string @namespace) : this(clientFactory, url, SoapVersion.Soap11, @namespace)
+    public SoapService(IHttpClientFactory clientFactory, string url, string @namespace) 
+        : this(clientFactory, url, SoapVersion.Soap11, @namespace)
     {
-
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string @namespace) : this(clientFactory, url, version, @namespace, @namespace)
+    public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string @namespace) 
+        : this(clientFactory, url, version, @namespace, @namespace)
     {
-
     }
 
     public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string requestNamespace, string responseNamespace)
     {
-        this.clientFactory = clientFactory;
+        //this.clientFactory = clientFactory;
         this.url = url;
         this.version = version;
         this.requestNamespace = requestNamespace.EndsWith("/") ? requestNamespace : requestNamespace + '/';
         this.responseNamespace = responseNamespace.EndsWith("/") ? requestNamespace : requestNamespace + '/';
-        //this.httpClient = clientFactory.CreateClient();
+        this.httpClient = clientFactory.CreateClient(url);
     }
 
     private static string FormatValue(object? value)
@@ -134,8 +135,7 @@ public class SoapService : ISoapService//, IDisposable
     }
     public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null)
     {
-        var client = httpClient ?? clientFactory.CreateClient(configuration?.Name ?? "");
-        return SendAsync(client, methodName, args);
+        return SendAsync(httpClient, methodName, args);
     }
 
     public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null)
@@ -256,4 +256,22 @@ public class SoapService : ISoapService//, IDisposable
         }
     }
 
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                httpClient.Dispose();
+            }
+
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
 }
