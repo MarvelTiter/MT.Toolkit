@@ -1,4 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("WebServiceTest")]
+[assembly: InternalsVisibleTo("SoapReponseTest")]
 [assembly: InternalsVisibleTo("MapperTest")]

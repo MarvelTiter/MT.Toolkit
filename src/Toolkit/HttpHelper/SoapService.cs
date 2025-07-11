@@ -8,19 +8,22 @@ using System.Xml;
 using System.Xml.XPath;
 using System.Linq;
 using System.Threading;
+using System.Diagnostics;
 namespace MT.Toolkit.HttpHelper;
 
-public class SoapService : ISoapService//, IDisposable
+internal partial class SoapService : ISoapService//, IDisposable
 {
-    //private readonly IHttpClientFactory clientFactory;
+    private const string SLASH = "/";
+    private readonly IHttpClientFactory clientFactory;
     private readonly string? url;
     private readonly SoapVersion? version;
+    private readonly Action<string> logAction;
     private readonly string? requestNamespace;
     private readonly string? responseNamespace;
     private readonly SoapServiceConfiguration? configuration;
-    private HttpClient httpClient;
     private bool disposedValue;
-
+    private readonly SemaphoreSlim semaphore;
+    #region 属性
     private string Url => configuration?.Url ?? url ?? throw new ArgumentNullException();
     private SoapVersion Version => configuration?.Version ?? version ?? SoapVersion.Soap11;
     private string RequestNamespace => configuration?.RequestNamespace ?? requestNamespace ?? "http://tempuri.org/";
@@ -76,37 +79,130 @@ public class SoapService : ISoapService//, IDisposable
         }
     }
 
-    public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration)
+    #endregion
+
+    #region 构造函数
+    public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration, Action<string> logAction)
     {
-        //this.clientFactory = clientFactory;
+        this.clientFactory = clientFactory;
         this.configuration = configuration;
-        this.httpClient = clientFactory.CreateClient(configuration.Name);
+        this.logAction = logAction;
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
+        semaphore = new SemaphoreSlim(configuration.ConcurrencyLimit, configuration.ConcurrencyLimit);
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url)
-        : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/")
+    public SoapService(IHttpClientFactory clientFactory, string url, Action<string> logAction)
+        : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/", logAction)
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, string @namespace)
-        : this(clientFactory, url, SoapVersion.Soap11, @namespace)
+    public SoapService(IHttpClientFactory clientFactory
+        , string url
+        , string @namespace
+        , Action<string> logAction)
+        : this(clientFactory, url, SoapVersion.Soap11, @namespace, logAction)
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string @namespace)
-        : this(clientFactory, url, version, @namespace, @namespace)
+    public SoapService(IHttpClientFactory clientFactory
+        , string url
+        , SoapVersion version
+        , string @namespace
+        , Action<string> logAction)
+        : this(clientFactory, url, version, @namespace, @namespace, logAction)
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, SoapVersion version, string requestNamespace, string responseNamespace)
+    public SoapService(IHttpClientFactory clientFactory
+        , string url
+        , SoapVersion version
+        , string requestNamespace
+        , string responseNamespace
+        , Action<string> logAction)
     {
-        //this.clientFactory = clientFactory;
+        this.clientFactory = clientFactory;
         this.url = url;
         this.version = version;
-        this.requestNamespace = requestNamespace.EndsWith("/") ? requestNamespace : requestNamespace + '/';
-        this.responseNamespace = responseNamespace.EndsWith("/") ? requestNamespace : requestNamespace + '/';
-        this.httpClient = clientFactory.CreateClient(url);
+        this.logAction = logAction;
+        this.requestNamespace = requestNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
+        this.responseNamespace = responseNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
+        //this.httpClient = this.clientFactory.CreateClient(url);
+        semaphore = new SemaphoreSlim(10, 10);
+    }
+    #endregion
+
+    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+        var client = clientFactory.CreateClient(configuration?.Name ?? Url);
+        return SendAsync(client, methodName, args, cancellationToken);
+    }
+
+    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+        StringBuilder contentString = new StringBuilder();
+        if (args != null)
+        {
+            foreach (var item in args)
+            {
+                contentString.Append($"<{item.Key}><![CDATA[{FormatValue(item.Value)}]]></{item.Key}>");
+            }
+        }
+        string content = $"""
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="{EnvelopeNs}" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+       <soap:Body>
+         <{methodName} xmlns="{RequestNamespace}">
+             {contentString}
+         </{methodName}>
+     </soap:Body>
+</soap:Envelope>
+""";
+        string? rawContent = null;
+        try
+        {
+            using HttpRequestMessage request = new(HttpMethod.Post, Url)
+            {
+                Content = new StringContent(content, Encoding.UTF8, HttpContentType)
+            };
+            if (Version == SoapVersion.Soap11)
+            {
+                request.Headers.Add("SOAPAction", $"{RequestNamespace}{methodName}");
+            }
+            await semaphore.WaitAsync(cancellationToken);
+            var start = StopwatchHelper.GetTimestamp();
+            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var elapsed = StopwatchHelper.GetElapsedTime(start);
+            logAction($"{methodName}: 耗时 {elapsed.TotalMilliseconds}ms");
+            // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
+#if NET6_0_OR_GREATER
+            rawContent = await response.Content.ReadAsStringAsync(cancellationToken);
+#else
+            rawContent = await response.Content.ReadAsStringAsync();
+#endif
+            // 解析内容
+            var doc = XDocument.Parse(rawContent);
+            XmlNamespaceManager resolver = new(new NameTable());
+            resolver.AddNamespace(NpAlia, EnvelopeNs);
+            resolver.AddNamespace(SoapResponse.RN_ALIAS, ResponseNamespace);
+            if (IsSoapFault(rawContent, EnvelopeNs))
+            {
+                //异常处理
+                throw ParseSoapFault(doc, EnvelopeNs, Version, resolver);
+            }
+            else
+            {
+                var innerXml = doc.XPathSelectElement($"//{NpAlia}:Body/{SoapResponse.RN_ALIAS}:{methodName}Response", resolver)?.ToString();
+                return new SoapResponse(content, rawContent, innerXml, resolver, methodName);
+            }
+        }
+        catch (Exception ex)
+        {
+            return new SoapResponse(content, rawContent, ex);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     private static string FormatValue(object? value)
@@ -124,76 +220,6 @@ public class SoapService : ISoapService//, IDisposable
             return date.ToString("yyyy-MM-ddTHH:mm:ss.fff");
         }
         return $"{value}";
-    }
-    public void SetHttpClient(HttpClient client)
-    {
-        httpClient = client;
-    }
-    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
-    {
-        return SendAsync(httpClient, methodName, args, cancellationToken);
-    }
-
-    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
-    {
-        StringBuilder contentString = new StringBuilder();
-        if (args != null)
-        {
-            foreach (var item in args)
-            {
-                contentString.Append($"<{item.Key}><![CDATA[{FormatValue(item.Value)}]]></{item.Key}>");
-            }
-        }
-        string content = $@"<soapenv:Envelope xmlns:soapenv=""{EnvelopeNs}"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"" xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"">
-                   <soapenv:Body>
-                     <{methodName} xmlns=""{RequestNamespace}"">
-                         {contentString}
-                     </{methodName}>
-                 </soapenv:Body>
-              </soapenv:Envelope>";
-
-        string? rawContent = null;
-        HttpContent httpContent = new StringContent(content, Encoding.UTF8, HttpContentType);
-        try
-        {
-            using HttpRequestMessage request = new (HttpMethod.Post, Url)
-            {
-                Content = httpContent
-            };
-            if (Version == SoapVersion.Soap11)
-            {
-                request.Headers.Add("SOAPAction", $"{RequestNamespace}{methodName}");
-            }
-            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-            // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
-            var result = await response.Content.ReadAsStreamAsync();
-            rawContent = await response.Content.ReadAsStringAsync();
-            // 解析内容
-            //using var reader = new StringReader(result);
-            using var xmlReader = XmlReader.Create(result);
-            var doc = XDocument.Load(xmlReader);
-            XmlNameTable nameTable = xmlReader.NameTable;
-            XmlNamespaceManager namespaceManager = new XmlNamespaceManager(nameTable);
-            namespaceManager.AddNamespace(NpAlia, EnvelopeNs);
-            if (!string.IsNullOrEmpty(ResponseNamespace))
-            {
-                namespaceManager.AddNamespace(SoapResponse.RN_ALIAS, ResponseNamespace);
-            }
-            if (IsSoapFault(rawContent, EnvelopeNs))
-            {
-                //异常处理
-                throw ParseSoapFault(doc, EnvelopeNs, Version, namespaceManager);
-            }
-            else
-            {
-                var innerXml = doc.XPathSelectElement($"//{NpAlia}:Body/{SoapResponse.RN_ALIAS}:{methodName}Response", namespaceManager)?.ToString();
-                return new SoapResponse(content, rawContent, innerXml, namespaceManager, methodName);
-            }
-        }
-        catch (Exception ex)
-        {
-            return new SoapResponse(content, rawContent, ex);
-        }
     }
 
     internal static bool IsSoapFault(string content, string envelopeNs)
@@ -259,7 +285,7 @@ public class SoapService : ISoapService//, IDisposable
         {
             if (disposing)
             {
-                httpClient.Dispose();
+                //httpClient.Dispose();
             }
 
             disposedValue = true;
@@ -270,5 +296,21 @@ public class SoapService : ISoapService//, IDisposable
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+}
+
+file class StopwatchHelper
+{
+    public static long GetTimestamp() => Stopwatch.GetTimestamp();
+    public static TimeSpan GetElapsedTime(long startingTimestamp)
+    {
+#if NET8_0_OR_GREATER
+        return Stopwatch.GetElapsedTime(startingTimestamp);
+#else
+        var end = Stopwatch.GetTimestamp();
+        var tickFrequency = (double)(10000 * 1000 / Stopwatch.Frequency);
+        var tick = (end - startingTimestamp) * tickFrequency;
+        return new TimeSpan((long)tick);
+#endif
     }
 }

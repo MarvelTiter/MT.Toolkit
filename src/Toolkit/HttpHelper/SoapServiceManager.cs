@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 #if NET6_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 namespace MT.Toolkit.HttpHelper
 {
-    public class SoapServiceManager : ISoapServiceManager
+    internal class SoapServiceManager : ISoapServiceManager
     {
         private readonly ConcurrentDictionary<string, SoapServiceConfiguration> configs = new();
         private string? defaultKey;

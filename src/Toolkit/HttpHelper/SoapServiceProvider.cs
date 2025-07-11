@@ -6,19 +6,23 @@ using System.Collections.Concurrent;
 
 namespace MT.Toolkit.HttpHelper
 {
-    public class SoapServiceProvider : ISoapServiceFactory
+    internal class SoapServiceProvider : ISoapServiceFactory
     {
         private readonly IServiceProvider provider;
         private readonly ISoapServiceManager soapServiceManager;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly ConcurrentDictionary<string, SoapService> services = [];
         private bool disposedValue;
-
-        public SoapServiceProvider(IServiceProvider provider, ISoapServiceManager soapServiceManager, IHttpClientFactory httpClientFactory)
+        private ILogger logger;
+        public SoapServiceProvider(IServiceProvider provider
+            , ISoapServiceManager soapServiceManager
+            , IHttpClientFactory httpClientFactory
+            , ILogger<ISoapServiceFactory> logger)
         {
             this.provider = provider;
             this.soapServiceManager = soapServiceManager;
             this.httpClientFactory = httpClientFactory;
+            this.logger = logger;
         }
         public ISoapService? Default
         {
@@ -30,13 +34,18 @@ namespace MT.Toolkit.HttpHelper
             }
         }
 
+        internal void Log(string message)
+        {
+            logger.LogInformation("{message}", message);
+        }
+
         public ISoapService GetSoapService(string key)
         {
             return services.GetOrAdd(key, (name) =>
              {
                  if (soapServiceManager.Configs.TryGetValue(name, out var config))
                  {
-                     return new SoapService(httpClientFactory, config);
+                     return new SoapService(httpClientFactory, config, Log);
                  }
                  throw new ArgumentNullException($"未注册SoapService[{name}]");
              });

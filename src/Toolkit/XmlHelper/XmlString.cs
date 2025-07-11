@@ -27,13 +27,14 @@ namespace MT.Toolkit.XmlHelper
                 {
                     Value = $"<root>{Value}</root>";
                 }
-               
-                using var reader = new StringReader(Value);
-                using var xmlReader = XmlReader.Create(reader, new XmlReaderSettings()
-                {
-                    ConformanceLevel = ConformanceLevel.Fragment
-                });
-                return XElement.Load(xmlReader);
+
+                //using var reader = new StringReader(Value);
+                //using var xmlReader = XmlReader.Create(reader, new XmlReaderSettings()
+                //{
+                //    ConformanceLevel = ConformanceLevel.Fragment
+                //});
+                //XElement.Load(xmlReader);
+                return XElement.Parse(Value);
             });
         }
 
