@@ -22,7 +22,6 @@ internal partial class SoapService : ISoapService//, IDisposable
     private readonly string? responseNamespace;
     private readonly SoapServiceConfiguration? configuration;
     private bool disposedValue;
-    private readonly SemaphoreSlim semaphore;
     #region 属性
     private string Url => configuration?.Url ?? url ?? throw new ArgumentNullException();
     private SoapVersion Version => configuration?.Version ?? version ?? SoapVersion.Soap11;
@@ -80,7 +79,32 @@ internal partial class SoapService : ISoapService//, IDisposable
     }
 
     #endregion
+    private readonly EmptyableSemaphero semaphore;
+    class EmptyableSemaphero : IDisposable
+    {
+        private readonly SemaphoreSlim? semaphore;
 
+        public EmptyableSemaphero(int count)
+        {
+            if (count > 0)
+            {
+                semaphore = new(count, count);
+            }
+        }
+
+        public Task WaitAsync(CancellationToken cancellationToken = default)
+        {
+            return semaphore?.WaitAsync(cancellationToken) ?? Task.CompletedTask;
+        }
+        public void Release()
+        {
+            semaphore?.Release();
+        }
+        public void Dispose()
+        {
+            semaphore?.Dispose();
+        }
+    }
     #region 构造函数
     public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration, Action<string> logAction)
     {
@@ -88,7 +112,7 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.configuration = configuration;
         this.logAction = logAction;
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
-        semaphore = new SemaphoreSlim(configuration.ConcurrencyLimit, configuration.ConcurrencyLimit);
+        semaphore = new(configuration.ConcurrencyLimit);
     }
 
     public SoapService(IHttpClientFactory clientFactory, string url, Action<string> logAction)
@@ -127,7 +151,7 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.requestNamespace = requestNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         this.responseNamespace = responseNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         //this.httpClient = this.clientFactory.CreateClient(url);
-        semaphore = new SemaphoreSlim(10, 10);
+        semaphore = new(SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT);
     }
     #endregion
 
@@ -139,27 +163,11 @@ internal partial class SoapService : ISoapService//, IDisposable
 
     public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        StringBuilder contentString = new StringBuilder();
-        if (args != null)
-        {
-            foreach (var item in args)
-            {
-                contentString.Append($"<{item.Key}><![CDATA[{FormatValue(item.Value)}]]></{item.Key}>");
-            }
-        }
-        string content = $"""
-<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="{EnvelopeNs}" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-       <soap:Body>
-         <{methodName} xmlns="{RequestNamespace}">
-             {contentString}
-         </{methodName}>
-     </soap:Body>
-</soap:Envelope>
-""";
+        string content = BuildSoapRequest(methodName, args);
         string? rawContent = null;
         try
         {
+            await semaphore.WaitAsync(cancellationToken);
             using HttpRequestMessage request = new(HttpMethod.Post, Url)
             {
                 Content = new StringContent(content, Encoding.UTF8, HttpContentType)
@@ -168,9 +176,8 @@ internal partial class SoapService : ISoapService//, IDisposable
             {
                 request.Headers.Add("SOAPAction", $"{RequestNamespace}{methodName}");
             }
-            await semaphore.WaitAsync(cancellationToken);
             var start = StopwatchHelper.GetTimestamp();
-            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await SendAsync(client, request, cancellationToken).ConfigureAwait(false);
             var elapsed = StopwatchHelper.GetElapsedTime(start);
             logAction($"{methodName}: 耗时 {elapsed.TotalMilliseconds}ms");
             // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
@@ -199,10 +206,53 @@ internal partial class SoapService : ISoapService//, IDisposable
         {
             return new SoapResponse(content, rawContent, ex);
         }
+    }
+
+    /// <summary>
+    /// 信号量阻塞的发送请求
+    /// </summary>
+    /// <param name="client"></param>
+    /// <param name="request"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    private async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        await semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            return await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
         finally
         {
             semaphore.Release();
         }
+    }
+
+    private string BuildSoapRequest(string methodName, Dictionary<string, object>? args)
+    {
+        StringBuilder contentString = new();
+        if (args != null)
+        {
+            foreach (var item in args)
+            {
+                contentString.Append($"<{item.Key}><![CDATA[{FormatValue(item.Value)}]]></{item.Key}>");
+            }
+        }
+        string content = $"""
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="{EnvelopeNs}" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+       <soap:Body>
+         <{methodName} xmlns="{RequestNamespace}">
+             {contentString}
+         </{methodName}>
+     </soap:Body>
+</soap:Envelope>
+""";
+        return content;
     }
 
     private static string FormatValue(object? value)

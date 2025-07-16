@@ -21,6 +21,7 @@ namespace MT.Toolkit.HttpHelper
     /// </summary>
     public class SoapServiceConfiguration
     {
+        public const int DEFAULT_CONCURRENCY_LIMIT = 10;
         internal SoapServiceConfiguration(string name)
         {
             Name = name;
