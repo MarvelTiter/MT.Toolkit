@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 
 namespace MT.Toolkit.HttpHelper
 {
+    [Obsolete("Use SoapRequestHelper Package instead.", true)]
     internal class SoapServiceProvider : ISoapServiceFactory
     {
         private readonly IServiceProvider provider;

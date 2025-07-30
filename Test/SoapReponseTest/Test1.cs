@@ -1,10 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Xml.Linq;
 using System.Xml;
-using MT.Toolkit.HttpHelper;
 using Microsoft.Extensions.DependencyInjection;
-using MT.Toolkit.XmlHelper;
 using System.Xml.XPath;
+using SoapRequestHelper.XmlHelper;
+using SoapRequestHelper;
 
 namespace SoapReponseTest;
 

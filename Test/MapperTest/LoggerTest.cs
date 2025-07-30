@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using LoggerProviderExtensions;
+using LoggerProviderExtensions.DbLogger;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MT.Toolkit.LogTool;
-using MT.Toolkit.LogTool.DbLogger;
 
 namespace MapperTest
 {

@@ -21,6 +21,7 @@ namespace MT.Toolkit.HttpHelper
         /// <param name="services"></param>
         /// <param name="manager"></param>
         /// <returns></returns>
+        [Obsolete("Use SoapRequestHelper Package instead.", true)]
         public static IServiceCollection AddSoapServiceHelper(this IServiceCollection services, Action<ISoapServiceManager> manager)
         {
             var serviceManager = new SoapServiceManager();

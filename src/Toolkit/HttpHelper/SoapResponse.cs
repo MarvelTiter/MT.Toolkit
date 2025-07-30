@@ -14,6 +14,7 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 namespace MT.Toolkit.HttpHelper
 {
+    [Obsolete("Use SoapRequestHelper Package instead.", true)]
     public sealed class SoapResponse
     {
         public const string RN_ALIAS = "r";

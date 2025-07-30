@@ -7,6 +7,9 @@ using System;
 
 namespace MT.Toolkit.LogTool
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public static class SerivceExtension
     {
         [Obsolete]
@@ -23,6 +26,7 @@ namespace MT.Toolkit.LogTool
             return builder;
         }
 
+        [Obsolete("use LoggerProviderExtensions package instead", true)]
         public static ILoggingBuilder AddLocalFileLogger(this ILoggingBuilder builder, Action<IFileLoggerSetting>? config = null)
         {
             config ??= c => { };
@@ -32,6 +36,7 @@ namespace MT.Toolkit.LogTool
             return builder;
         }
 
+        [Obsolete("use LoggerProviderExtensions package instead", true)]
         public static ILoggingBuilder AddDbLogger(this ILoggingBuilder builder, Action<IDbLoggerSetting>? config = null)
         {
             config ??= c => { };

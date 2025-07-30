@@ -1,4 +1,4 @@
-# This workflow will build a .NET project
+﻿# This workflow will build a .NET project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
 
 name: publish
@@ -24,6 +24,8 @@ jobs:
       run: |
         dotnet build -c Release
         dotnet pack ./src/Toolkit/Toolkit.csproj -c Release -o publish
+        dotnet pack ./src/SoapRequestHelper/SoapRequestHelper.csproj -c Release -o publish
+        dotnet pack ./src/LoggerProviderExtensions/LoggerProviderExtensions.csproj -c Release -o publish
     - name: Push
       run: |
         dotnet nuget push 'publish/*.nupkg' -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate

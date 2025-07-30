@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\LoggerProviderExtensions\LoggerProviderExtensions.csproj" />
     <ProjectReference Include="..\..\src\Toolkit\Toolkit.csproj" />
   </ItemGroup>
 

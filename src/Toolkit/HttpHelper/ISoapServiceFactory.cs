@@ -5,6 +5,7 @@ namespace MT.Toolkit.HttpHelper
     /// <summary>
     /// SOAP服务工厂
     /// </summary>
+    [Obsolete("Use SoapRequestHelper Package instead.", true)]
     public interface ISoapServiceFactory : IDisposable
     {
         /// <summary>

@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using System.Net.Http;
-using System.Xml;
-using System.Xml.XPath;
-using System.Linq;
-using System.Threading;
 using System.Diagnostics;
-namespace MT.Toolkit.HttpHelper;
+using System.Linq;
+using System.Net.Http;
+using System.Reflection;
+using System.Text;
+using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
+namespace SoapRequestHelper;
 
-[Obsolete("Use SoapRequestHelper Package instead.", true)]
 internal partial class SoapService : ISoapService//, IDisposable
 {
     private const string SLASH = "/";
@@ -80,32 +81,108 @@ internal partial class SoapService : ISoapService//, IDisposable
     }
 
     #endregion
-    private readonly EmptyableSemaphero semaphore;
-    class EmptyableSemaphero : IDisposable
-    {
-        private readonly SemaphoreSlim? semaphore;
+    private readonly SoapRequestChannel requestChannel;
 
-        public EmptyableSemaphero(int count)
+    private record SoapRequest(
+        HttpClient Client,
+        string MethodName,
+        Dictionary<string, object>? Args,
+        TaskCompletionSource<SoapResponse> CompletionSource,
+        CancellationToken CancellationToken);
+
+    private class SoapRequestChannel : IAsyncDisposable
+    {
+        private readonly Channel<SoapRequest>? channel;
+        private readonly Task[] workerTasks = [];
+        private readonly Func<SoapRequest, Task<SoapResponse>> handler;
+        private readonly Func<SoapRequest, Task> writer;
+        private readonly CancellationTokenSource cts = new();
+        public SoapRequestChannel(int capacity, Func<SoapRequest, Task<SoapResponse>> handler)
         {
-            if (count > 0)
+            if (capacity > 0)
             {
-                semaphore = new(count, count);
+                channel = Channel.CreateBounded<SoapRequest>(new BoundedChannelOptions(capacity)
+                {
+                    FullMode = BoundedChannelFullMode.Wait,
+                    SingleReader = false,
+                    SingleWriter = false
+                });
+
+                // 启动工作线程
+                workerTasks = new Task[capacity];
+                for (int i = 0; i < capacity; i++)
+                {
+                    workerTasks[i] = Task.Run(ProcessRequestsAsync);
+                }
+                writer = WriteIntoChannelAsync;
+            }
+            else
+            {
+                writer = WriteDirectlyAsync;
+            }
+
+            this.handler = handler;
+        }
+        private async Task ProcessRequestsAsync()
+        {
+            if (channel == null) return;
+            await foreach (var request in channel.Reader.ReadAllAsync(cts.Token))
+            {
+                try
+                {
+                    var response = await handler(request);
+                    request.CompletionSource.SetResult(response);
+                }
+                catch (Exception ex)
+                {
+                    request.CompletionSource.SetException(ex);
+                }
             }
         }
 
-        public Task WaitAsync(CancellationToken cancellationToken = default)
+        private async Task WriteIntoChannelAsync(SoapRequest request)
         {
-            return semaphore?.WaitAsync(cancellationToken) ?? Task.CompletedTask;
+            if (channel == null) return;
+            await channel.Writer.WriteAsync(request, request.CancellationToken);
         }
-        public void Release()
+
+        private Task WriteDirectlyAsync(SoapRequest request)
         {
-            semaphore?.Release();
+            // 使用ConfigureAwait(false)避免同步上下文问题
+            return HandleRequestAsync(request);
+
+            async Task HandleRequestAsync(SoapRequest req)
+            {
+                try
+                {
+                    var response = await handler(req).ConfigureAwait(false);
+                    req.CompletionSource.TrySetResult(response);
+                }
+                catch (Exception ex)
+                {
+                    req.CompletionSource.TrySetException(ex);
+                }
+            }
         }
-        public void Dispose()
+
+        public Task WriteAsync(SoapRequest request) => writer(request);
+
+        public async ValueTask DisposeAsync()
         {
-            semaphore?.Dispose();
+            if (channel != null)
+            {
+                channel.Writer.Complete();
+                await Task.WhenAll(workerTasks);
+                foreach (var task in workerTasks)
+                {
+                    task.Dispose();
+                }
+            }
+            cts.Cancel();
+            cts.Dispose();
         }
     }
+
     #region 构造函数
     public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration, Action<string> logAction)
     {
@@ -113,7 +190,7 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.configuration = configuration;
         this.logAction = logAction;
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
-        semaphore = new(configuration.ConcurrencyLimit);
+        requestChannel = new SoapRequestChannel(configuration.ConcurrencyLimit, ProcessSoapRequest);
     }
 
     public SoapService(IHttpClientFactory clientFactory, string url, Action<string> logAction)
@@ -152,23 +229,20 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.requestNamespace = requestNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         this.responseNamespace = responseNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         //this.httpClient = this.clientFactory.CreateClient(url);
-        semaphore = new(SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT);
+        requestChannel = new SoapRequestChannel(SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT, ProcessSoapRequest);
     }
     #endregion
 
-    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    private async Task<SoapResponse> ProcessSoapRequest(SoapRequest soapRequest)
     {
-        var client = clientFactory.CreateClient(configuration?.Name ?? Url);
-        return SendAsync(client, methodName, args, cancellationToken);
-    }
-
-    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
-    {
+        var methodName = soapRequest.MethodName;
+        var args = soapRequest.Args;
+        var cancellationToken = soapRequest.CancellationToken;
+        var client = soapRequest.Client;
         string content = BuildSoapRequest(methodName, args);
         string? rawContent = null;
         try
         {
-            await semaphore.WaitAsync(cancellationToken);
             using HttpRequestMessage request = new(HttpMethod.Post, Url)
             {
                 Content = new StringContent(content, Encoding.UTF8, HttpContentType)
@@ -178,7 +252,7 @@ internal partial class SoapService : ISoapService//, IDisposable
                 request.Headers.Add("SOAPAction", $"{RequestNamespace}{methodName}");
             }
             var start = StopwatchHelper.GetTimestamp();
-            using HttpResponseMessage response = await SendAsync(client, request, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
             var elapsed = StopwatchHelper.GetElapsedTime(start);
             logAction($"{methodName}: 耗时 {elapsed.TotalMilliseconds}ms");
             // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
@@ -209,28 +283,19 @@ internal partial class SoapService : ISoapService//, IDisposable
         }
     }
 
-    /// <summary>
-    /// 信号量阻塞的发送请求
-    /// </summary>
-    /// <param name="client"></param>
-    /// <param name="request"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    private async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        await semaphore.WaitAsync(cancellationToken);
-        try
-        {
-            return await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
-            throw;
-        }
-        finally
-        {
-            semaphore.Release();
-        }
+        var client = clientFactory.CreateClient(configuration?.Name ?? Url);
+        return SendAsync(client, methodName, args, cancellationToken);
+    }
+
+    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+        var tcs = new TaskCompletionSource<SoapResponse>();
+        var request = new SoapRequest(client, methodName, args, tcs, cancellationToken);
+
+        await requestChannel.WriteAsync(request);
+        return await tcs.Task;
     }
 
     private string BuildSoapRequest(string methodName, Dictionary<string, object>? args)
@@ -330,23 +395,11 @@ internal partial class SoapService : ISoapService//, IDisposable
         }
     }
 
-    protected virtual void Dispose(bool disposing)
+    public async ValueTask DisposeAsync()
     {
-        if (!disposedValue)
-        {
-            if (disposing)
-            {
-                //httpClient.Dispose();
-            }
-
-            disposedValue = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
+        if (disposedValue) return;
+        await requestChannel.DisposeAsync();
+        disposedValue = true;
     }
 }
 
