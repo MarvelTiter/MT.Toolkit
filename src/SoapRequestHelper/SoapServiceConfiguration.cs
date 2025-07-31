@@ -8,6 +8,7 @@ namespace SoapRequestHelper;
 public class SoapServiceConfiguration
 {
     internal const int DEFAULT_CONCURRENCY_LIMIT = 10;
+    internal const int DEFAULT_QUEUE_CAPACITY = 100;
     internal SoapServiceConfiguration(string name)
     {
         Name = name;
@@ -38,7 +39,11 @@ public class SoapServiceConfiguration
     /// </summary>
     public string? ResponseNamespace { get; set; }
     /// <summary>
-    /// 请求队列容量
+    /// 队列容量
+    /// </summary>
+    public int QueueCapacity { get; set; }
+    /// <summary>
+    /// 并发数量
     /// </summary>
     public int ConcurrencyLimit { get; set; }
 }

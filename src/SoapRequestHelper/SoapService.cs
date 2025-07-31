@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
@@ -81,107 +81,14 @@ internal partial class SoapService : ISoapService//, IDisposable
     }
 
     #endregion
-    private readonly SoapRequestChannel requestChannel;
+    private readonly HttpRequestChannel<SoapRequest, HttpResponseMessage> requestChannel;
 
     private record SoapRequest(
         HttpClient Client,
         string MethodName,
-        Dictionary<string, object>? Args,
-        TaskCompletionSource<SoapResponse> CompletionSource,
-        CancellationToken CancellationToken);
-
-    private class SoapRequestChannel : IAsyncDisposable
-    {
-        private readonly Channel<SoapRequest>? channel;
-        private readonly Task[] workerTasks = [];
-        private readonly Func<SoapRequest, Task<SoapResponse>> handler;
-        private readonly Func<SoapRequest, Task> writer;
-        private readonly CancellationTokenSource cts = new();
-        public SoapRequestChannel(int capacity, Func<SoapRequest, Task<SoapResponse>> handler)
-        {
-            if (capacity > 0)
-            {
-                channel = Channel.CreateBounded<SoapRequest>(new BoundedChannelOptions(capacity)
-                {
-                    FullMode = BoundedChannelFullMode.Wait,
-                    SingleReader = false,
-                    SingleWriter = false
-                });
-
-                // 启动工作线程
-                workerTasks = new Task[capacity];
-                for (int i = 0; i < capacity; i++)
-                {
-                    workerTasks[i] = Task.Run(ProcessRequestsAsync);
-                }
-                writer = WriteIntoChannelAsync;
-            }
-            else
-            {
-                writer = WriteDirectlyAsync;
-            }
-
-            this.handler = handler;
-        }
-        private async Task ProcessRequestsAsync()
-        {
-            if (channel == null) return;
-            await foreach (var request in channel.Reader.ReadAllAsync(cts.Token))
-            {
-                try
-                {
-                    var response = await handler(request);
-                    request.CompletionSource.SetResult(response);
-                }
-                catch (Exception ex)
-                {
-                    request.CompletionSource.SetException(ex);
-                }
-            }
-        }
-
-        private async Task WriteIntoChannelAsync(SoapRequest request)
-        {
-            if (channel == null) return;
-            await channel.Writer.WriteAsync(request, request.CancellationToken);
-        }
-
-        private Task WriteDirectlyAsync(SoapRequest request)
-        {
-            // 使用ConfigureAwait(false)避免同步上下文问题
-            return HandleRequestAsync(request);
-
-            async Task HandleRequestAsync(SoapRequest req)
-            {
-                try
-                {
-                    var response = await handler(req).ConfigureAwait(false);
-                    req.CompletionSource.TrySetResult(response);
-                }
-                catch (Exception ex)
-                {
-                    req.CompletionSource.TrySetException(ex);
-                }
-            }
-        }
-
-        public Task WriteAsync(SoapRequest request) => writer(request);
-
-        public async ValueTask DisposeAsync()
-        {
-            if (channel != null)
-            {
-                channel.Writer.Complete();
-                await Task.WhenAll(workerTasks);
-                foreach (var task in workerTasks)
-                {
-                    task.Dispose();
-                }
-            }
-            cts.Cancel();
-            cts.Dispose();
-        }
-    }
+        HttpRequestMessage RequestMessage,
+        TaskCompletionSource<HttpResponseMessage> CompletionSource,
+        CancellationToken CancellationToken) : IHttpRequestChannelInput<HttpResponseMessage>;
 
     #region 构造函数
     public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration, Action<string> logAction)
@@ -190,7 +97,7 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.configuration = configuration;
         this.logAction = logAction;
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
-        requestChannel = new SoapRequestChannel(configuration.ConcurrencyLimit, ProcessSoapRequest);
+        requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
     }
 
     public SoapService(IHttpClientFactory clientFactory, string url, Action<string> logAction)
@@ -220,7 +127,9 @@ internal partial class SoapService : ISoapService//, IDisposable
         , SoapVersion version
         , string requestNamespace
         , string responseNamespace
-        , Action<string> logAction)
+        , Action<string> logAction
+        , int? queueCapacity = null
+        , int? concurrent = null)
     {
         this.clientFactory = clientFactory;
         this.url = url;
@@ -229,32 +138,98 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.requestNamespace = requestNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         this.responseNamespace = responseNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         //this.httpClient = this.clientFactory.CreateClient(url);
-        requestChannel = new SoapRequestChannel(SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT, ProcessSoapRequest);
+        requestChannel = new(queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY, concurrent ?? SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT, ProcessSoapRequest);
     }
     #endregion
 
-    private async Task<SoapResponse> ProcessSoapRequest(SoapRequest soapRequest)
+    private async Task<HttpResponseMessage> ProcessSoapRequest(SoapRequest soapRequest)
     {
-        var methodName = soapRequest.MethodName;
-        var args = soapRequest.Args;
         var cancellationToken = soapRequest.CancellationToken;
         var client = soapRequest.Client;
+        var start = StopwatchHelper.GetTimestamp();
+        HttpResponseMessage response = await client.SendAsync(soapRequest.RequestMessage, cancellationToken).ConfigureAwait(false);
+        var elapsed = StopwatchHelper.GetElapsedTime(start);
+        response.EnsureSuccessStatusCode();
+        logAction($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
+        return response;
+    }
+
+    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+        var client = clientFactory.CreateClient(configuration?.Name ?? Url);
+        return SendAsync(client, methodName, args, cancellationToken);
+    }
+
+    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    {
+        var tcs = new TaskCompletionSource<HttpResponseMessage>();
         string content = BuildSoapRequest(methodName, args);
+        try
+        {
+            using HttpRequestMessage requestMessage = BuildRequestMessage(methodName, content);
+
+            var request = new SoapRequest(client, methodName, requestMessage, tcs, cancellationToken);
+
+            await requestChannel.WriteAsync(request);
+
+            using var response = await tcs.Task;
+
+            // 处理响应
+            var soapResponse = await HandleResponse(response, methodName, content, cancellationToken);
+            return soapResponse;
+        }
+        catch (OperationCanceledException)
+        {
+            return new SoapResponse(content, null, new SoapFaultException("Request canceled", "Canceled", "The request was canceled"));
+        }
+        catch (Exception ex)
+        {
+            return new SoapResponse(content, null, ex);
+        }
+    }
+
+    private string BuildSoapRequest(string methodName, Dictionary<string, object>? args)
+    {
+        StringBuilder contentString = new();
+        if (args != null)
+        {
+            foreach (var item in args)
+            {
+                contentString.Append($"<{item.Key}><![CDATA[{FormatValue(item.Value)}]]></{item.Key}>");
+            }
+        }
+        string content = $"""
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="{EnvelopeNs}" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+       <soap:Body>
+         <{methodName} xmlns="{RequestNamespace}">
+             {contentString}
+         </{methodName}>
+     </soap:Body>
+</soap:Envelope>
+""";
+        return content;
+    }
+
+    private HttpRequestMessage BuildRequestMessage(string methodName, string content)
+    {
+        HttpRequestMessage requestMessage = new(HttpMethod.Post, Url)
+        {
+            Content = new StringContent(content, Encoding.UTF8, HttpContentType)
+        };
+        if (Version == SoapVersion.Soap11)
+        {
+            requestMessage.Headers.Add("SOAPAction", $"{RequestNamespace}{methodName}");
+        }
+
+        return requestMessage;
+    }
+
+    private async Task<SoapResponse> HandleResponse(HttpResponseMessage response, string methodName, string content, CancellationToken cancellationToken)
+    {
         string? rawContent = null;
         try
         {
-            using HttpRequestMessage request = new(HttpMethod.Post, Url)
-            {
-                Content = new StringContent(content, Encoding.UTF8, HttpContentType)
-            };
-            if (Version == SoapVersion.Soap11)
-            {
-                request.Headers.Add("SOAPAction", $"{RequestNamespace}{methodName}");
-            }
-            var start = StopwatchHelper.GetTimestamp();
-            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-            var elapsed = StopwatchHelper.GetElapsedTime(start);
-            logAction($"{methodName}: 耗时 {elapsed.TotalMilliseconds}ms");
             // 得到返回的结果，注意该结果是基于XML格式的，最后按照约定解析该XML格式中的内容即可。
 #if NET6_0_OR_GREATER
             rawContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -281,44 +256,7 @@ internal partial class SoapService : ISoapService//, IDisposable
         {
             return new SoapResponse(content, rawContent, ex);
         }
-    }
 
-    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
-    {
-        var client = clientFactory.CreateClient(configuration?.Name ?? Url);
-        return SendAsync(client, methodName, args, cancellationToken);
-    }
-
-    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
-    {
-        var tcs = new TaskCompletionSource<SoapResponse>();
-        var request = new SoapRequest(client, methodName, args, tcs, cancellationToken);
-
-        await requestChannel.WriteAsync(request);
-        return await tcs.Task;
-    }
-
-    private string BuildSoapRequest(string methodName, Dictionary<string, object>? args)
-    {
-        StringBuilder contentString = new();
-        if (args != null)
-        {
-            foreach (var item in args)
-            {
-                contentString.Append($"<{item.Key}><![CDATA[{FormatValue(item.Value)}]]></{item.Key}>");
-            }
-        }
-        string content = $"""
-<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="{EnvelopeNs}" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-       <soap:Body>
-         <{methodName} xmlns="{RequestNamespace}">
-             {contentString}
-         </{methodName}>
-     </soap:Body>
-</soap:Envelope>
-""";
-        return content;
     }
 
     private static string FormatValue(object? value)

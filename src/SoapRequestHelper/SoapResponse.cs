@@ -6,9 +6,12 @@ using System.Xml;
 using System.Xml.Linq;
 namespace SoapRequestHelper;
 
+/// <summary>
+/// 请求响应对象
+/// </summary>
 public sealed class SoapResponse
 {
-    public const string RN_ALIAS = "r";
+    internal const string RN_ALIAS = "r";
     /// <summary>
     /// 请求是否发送成功
     /// </summary>
@@ -23,7 +26,7 @@ public sealed class SoapResponse
     public string? Message { get; set; }
     private readonly XmlString? xmlString;
     private readonly string? responseContent;
-    private XmlNamespaceManager? nsManager;
+    private readonly XmlNamespaceManager? nsManager;
     private readonly string? methodName;
 
     internal SoapResponse(string requestContent, string? responseContent, string? rawValue, XmlNamespaceManager manager, string? methodName)
@@ -43,8 +46,17 @@ public sealed class SoapResponse
         Exception = ex;
         Message = ex.Message;
     }
+    /// <summary>
+    /// 响应的XML内容
+    /// </summary>
     public string? RawContent => responseContent;
+    /// <summary>
+    /// 响应的XML内容中的Body部分
+    /// </summary>
     public string? RawValue => xmlString?.Value;
+    /// <summary>
+    /// 请求的XML内容
+    /// </summary>
     public string RequestContent { get; }
     private XElement? retXml;
 
@@ -71,7 +83,6 @@ public sealed class SoapResponse
     /// <summary>
     /// 接口签名中return的内容
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public dynamic? ReadReturnValue() => ReadReturnValue<object>();
 
