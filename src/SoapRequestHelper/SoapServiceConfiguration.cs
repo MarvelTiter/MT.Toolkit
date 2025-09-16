@@ -20,7 +20,6 @@ public class SoapServiceConfiguration
     /// <summary>
     /// 
     /// </summary>
-    [Obsolete]
     public Func<HttpClient>? ClientProvider { get; set; }
     /// <summary>
     /// 服务地址

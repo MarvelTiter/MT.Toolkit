@@ -1,5 +1,22 @@
 ﻿## 版本功能更新日志
 
+### v0.0.4
+- ⚡️可通过`ClientProvider`自定义连接池的实例创建
+
+```csharp
+builder.Services.AddSoapServiceHelper(m =>
+{
+    m.AddSoapService(nameof(RisCollector.Core.SoapServices.RISCollect), config =>
+    {
+        config.ClientProvider = () => new HttpClient();
+        config.Url = url;
+        config.ConcurrencyLimit = maxConcurrent;
+        config.QueueCapacity = maxQueueLimit;
+        config.RequestNamespace = "";
+        config.ResponseNamespace = "";
+    });
+});
+```
 ### v0.0.3
 - 🛠`SoapService`移除`IHttpClientFactory`, 引入`HttpClient`连接池
 

@@ -8,25 +8,21 @@ internal class HttpClientPool : IAsyncDisposable
 {
     private readonly ConcurrentQueue<HttpClient> pool = new();
     private readonly int poolSize;
-    private readonly string? baseUrl;
     private bool isDisposed;
     private readonly object initLock = new();
-
-    /// <summary>
-    /// 直接创建 HttpClient 实例池
-    /// </summary>
-    public HttpClientPool(string baseUrl, int poolSize)
-    {
-        this.baseUrl = baseUrl ?? throw new ArgumentNullException(nameof(baseUrl));
-        this.poolSize = poolSize;
-        InitializePool();
-    }
-
+    private readonly Func<HttpClient> httpClientFactory;
     /// <summary>
     /// 直接创建 HttpClient 实例池
     /// </summary>
     public HttpClientPool(int poolSize)
     {
+        httpClientFactory = () => new HttpClient();
+        this.poolSize = poolSize;
+        InitializePool();
+    }
+    public HttpClientPool(Func<HttpClient> httpClientFactory, int poolSize)
+    {
+        this.httpClientFactory = httpClientFactory;
         this.poolSize = poolSize;
         InitializePool();
     }
@@ -48,11 +44,7 @@ internal class HttpClientPool : IAsyncDisposable
 
     private HttpClient CreateHttpClient()
     {
-        var client = new HttpClient();
-        if (!string.IsNullOrEmpty(baseUrl))
-        {
-            client.BaseAddress = new Uri(baseUrl);
-        }
+        var client = httpClientFactory.Invoke();
         return client;
     }
 
@@ -117,7 +109,6 @@ internal class HttpClientPool : IAsyncDisposable
             // 简单的健康检查：确保客户端没有被处置
             // 注意：HttpClient 没有 IsDisposed 属性，我们需要其他方式检查
             _ = client.BaseAddress; // 如果已处置，这会抛出异常
-
             pool.Enqueue(client);
         }
         catch (ObjectDisposedException)

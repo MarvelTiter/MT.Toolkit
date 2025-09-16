@@ -16,7 +16,6 @@ namespace SoapRequestHelper;
 internal partial class SoapService : ISoapService//, IDisposable
 {
     private const string SLASH = "/";
-    private readonly IHttpClientFactory clientFactory;
     private readonly string? url;
     private readonly SoapVersion? version;
     private readonly Action<string> logAction;
@@ -92,48 +91,51 @@ internal partial class SoapService : ISoapService//, IDisposable
         CancellationToken CancellationToken) : IHttpRequestChannelInput<HttpResponseMessage>;
 
     #region 构造函数
-    public SoapService(IHttpClientFactory clientFactory, SoapServiceConfiguration configuration, Action<string> logAction)
+    public SoapService(SoapServiceConfiguration configuration, Action<string> logAction)
     {
-        this.clientFactory = clientFactory;
         this.configuration = configuration;
         this.logAction = logAction;
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
         requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
-        httpClientPool = new HttpClientPool(configuration.QueueCapacity);
+        if (configuration.ClientProvider is not null)
+        {
+            httpClientPool = new HttpClientPool(configuration.ClientProvider, configuration.QueueCapacity);
+        }
+        else
+        {
+            httpClientPool = new HttpClientPool(configuration.QueueCapacity);
+        }
     }
 
-    public SoapService(IHttpClientFactory clientFactory, string url, Action<string> logAction)
-        : this(clientFactory, url, SoapVersion.Soap11, "http://tempuri.org/", logAction)
+    public SoapService(string url, Action<string> logAction)
+        : this(url, SoapVersion.Soap11, "http://tempuri.org/", logAction)
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory
-        , string url
+    public SoapService(string url
         , string @namespace
         , Action<string> logAction)
-        : this(clientFactory, url, SoapVersion.Soap11, @namespace, logAction)
+        : this(url, SoapVersion.Soap11, @namespace, logAction)
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory
-        , string url
+    public SoapService(string url
         , SoapVersion version
         , string @namespace
         , Action<string> logAction)
-        : this(clientFactory, url, version, @namespace, @namespace, logAction)
+        : this(url, version, @namespace, @namespace, logAction)
     {
     }
 
-    public SoapService(IHttpClientFactory clientFactory
-        , string url
+    public SoapService(string url
         , SoapVersion version
         , string requestNamespace
         , string responseNamespace
         , Action<string> logAction
         , int? queueCapacity = null
-        , int? concurrent = null)
+        , int? concurrent = null
+        , Func<HttpClient>? clientProvider = null)
     {
-        this.clientFactory = clientFactory;
         this.url = url;
         this.version = version;
         this.logAction = logAction;
@@ -141,9 +143,16 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.responseNamespace = responseNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         //this.httpClient = this.clientFactory.CreateClient(url);
         requestChannel = new(queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY, concurrent ?? SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT, ProcessSoapRequest);
-        httpClientPool = new HttpClientPool(
-            queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY
-        );
+        if (clientProvider is not null)
+        {
+            httpClientPool = new(clientProvider, queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY);
+        }
+        else
+        {
+            httpClientPool = new HttpClientPool(
+                queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY
+            );
+        }
     }
     #endregion
 
@@ -156,7 +165,7 @@ internal partial class SoapService : ISoapService//, IDisposable
         var elapsed = StopwatchHelper.GetElapsedTime(start);
         response.EnsureSuccessStatusCode();
         logAction($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
-        //Console.WriteLine($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
+        Debug.WriteLine($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
         return response;
     }
 
