@@ -24,7 +24,7 @@ public class HttpRequestChannel<TIn, TOut> : IAsyncDisposable
     private readonly Channel<TIn>? channel;
     private readonly Task[] workerTasks = [];
     private readonly Func<TIn, Task<TOut>> handler;
-    private readonly Func<TIn, Task> writer;
+    private readonly Func<TIn, ValueTask> writer;
     private readonly CancellationTokenSource cts = new();
     /// <summary>
     /// 构造函数
@@ -76,18 +76,18 @@ public class HttpRequestChannel<TIn, TOut> : IAsyncDisposable
         }
     }
 
-    private async Task WriteIntoChannelAsync(TIn request)
+    private ValueTask WriteIntoChannelAsync(TIn request)
     {
-        if (channel == null) return;
-        await channel.Writer.WriteAsync(request, cts.Token);
+        if (channel == null) return ValueTask.CompletedTask;
+        return channel.Writer.WriteAsync(request, cts.Token);
     }
 
-    private Task WriteDirectlyAsync(TIn request)
+    private ValueTask WriteDirectlyAsync(TIn request)
     {
         // 使用ConfigureAwait(false)避免同步上下文问题
         return HandleRequestAsync(request);
 
-        async Task HandleRequestAsync(TIn req)
+        async ValueTask HandleRequestAsync(TIn req)
         {
             try
             {
@@ -106,7 +106,7 @@ public class HttpRequestChannel<TIn, TOut> : IAsyncDisposable
     /// </summary>
     /// <param name="request"></param>
     /// <returns></returns>
-    public Task WriteAsync(TIn request) => writer(request);
+    public ValueTask WriteAsync(TIn request) => writer(request);
 
     /// <summary>
     /// <inheritdoc/>
@@ -128,4 +128,3 @@ public class HttpRequestChannel<TIn, TOut> : IAsyncDisposable
         GC.SuppressFinalize(this);
     }
 }
-

@@ -24,6 +24,7 @@ internal partial class SoapService : ISoapService//, IDisposable
     private readonly string? responseNamespace;
     private readonly SoapServiceConfiguration? configuration;
     private bool disposedValue;
+    private readonly HttpClientPool httpClientPool;
     #region 属性
     private string Url => configuration?.Url ?? url ?? throw new ArgumentNullException();
     private SoapVersion Version => configuration?.Version ?? version ?? SoapVersion.Soap11;
@@ -98,6 +99,7 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.logAction = logAction;
         //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
         requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
+        httpClientPool = new HttpClientPool(configuration.QueueCapacity);
     }
 
     public SoapService(IHttpClientFactory clientFactory, string url, Action<string> logAction)
@@ -139,6 +141,9 @@ internal partial class SoapService : ISoapService//, IDisposable
         this.responseNamespace = responseNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
         //this.httpClient = this.clientFactory.CreateClient(url);
         requestChannel = new(queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY, concurrent ?? SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT, ProcessSoapRequest);
+        httpClientPool = new HttpClientPool(
+            queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY
+        );
     }
     #endregion
 
@@ -151,16 +156,34 @@ internal partial class SoapService : ISoapService//, IDisposable
         var elapsed = StopwatchHelper.GetElapsedTime(start);
         response.EnsureSuccessStatusCode();
         logAction($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
+        //Console.WriteLine($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
         return response;
     }
 
-    public Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    public async ValueTask<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        var client = clientFactory.CreateClient(configuration?.Name ?? Url);
-        return SendAsync(client, methodName, args, cancellationToken);
+        //var client = clientFactory.CreateClient(configuration?.Name ?? Url);
+        //using var client = new HttpClient();
+        var client = await httpClientPool.GetAsync(cancellationToken);
+        try
+        {
+            var response = await SendAsync(client, methodName, args, cancellationToken);
+            return response;
+        }
+        finally
+        {
+            httpClientPool.Return(client);
+        }
     }
 
-    public async Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    //public async ValueTask<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+    //{
+    //    var client = clientFactory.CreateClient(configuration?.Name ?? Url);
+    //    var response = await SendAsync(client, methodName, args, cancellationToken);
+    //    return response;
+    //}
+
+    public async ValueTask<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<HttpResponseMessage>();
         string content = BuildSoapRequest(methodName, args);
@@ -337,6 +360,7 @@ internal partial class SoapService : ISoapService//, IDisposable
     {
         if (disposedValue) return;
         await requestChannel.DisposeAsync();
+        await httpClientPool.DisposeAsync();
         disposedValue = true;
     }
 }

@@ -17,7 +17,7 @@ public interface ISoapService : IAsyncDisposable
     /// <param name="args">参数字典</param>
     /// <param name="cancellationToken">取消token</param>
     /// <returns></returns>
-    Task<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default);
+    ValueTask<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 发送请求
@@ -27,5 +27,5 @@ public interface ISoapService : IAsyncDisposable
     /// <param name="args">参数字典</param>
     /// <param name="cancellationToken">取消token</param>
     /// <returns></returns>
-    Task<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default);
+    ValueTask<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default);
 }
