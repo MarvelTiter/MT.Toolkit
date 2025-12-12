@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/doc/">
+    <File Path=".github/workflows/dotnet.yml" />
+    <File Path="doc/LoggerProviderExtensionsLog.md" />
+    <File Path="doc/SoapRequestHelperLog.md" />
+    <File Path="doc/更新日志.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/LoggerProviderExtensions/LoggerProviderExtensions.csproj" />
+    <Project Path="src/SoapRequestHelper/SoapRequestHelper.csproj" />
+    <Project Path="src/Toolkit/Toolkit.csproj" />
+  </Folder>
+  <Folder Name="/Test/">
+    <Project Path="Test/ExpressionTest/ExpressionTest.csproj" />
+    <Project Path="Test/MapperTest/MapperTest.csproj" />
+    <Project Path="Test/SoapReponseTest/SoapReponseTest.csproj" />
+    <Project Path="Test/TestWeb/TestWeb.csproj" />
+  </Folder>
+</Solution>

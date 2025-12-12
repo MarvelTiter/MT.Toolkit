@@ -1,6 +1,8 @@
-﻿using TestWeb.Components;
+﻿using LoggerProviderExtensions;
+using Microsoft.Extensions.Options;
+using TestWeb;
+using TestWeb.Components;
 using TestWeb.Components.Pages;
-using LoggerProviderExtensions;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -10,10 +12,13 @@ builder.Services.AddRazorComponents()
 builder.Logging.AddLocalFileLogger(setting =>
 {
     setting.SaveByCategory = true;
-    setting.SetFileWriteLevel<Counter>(LogLevel.Trace);
+}).AddDbLogger(setting =>
+{
+    setting.DbLoggerFacotry = () => new Dblogger();
 });
 
 var app = builder.Build();
+var o = app.Services.GetService<IOptions<LoggerFilterOptions>>();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

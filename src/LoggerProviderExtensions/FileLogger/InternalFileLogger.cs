@@ -1,46 +1,28 @@
 ﻿#if NET6_0_OR_GREATER
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LoggerProviderExtensions.FileLogger;
 
-internal class InternalFileLogger : ILogger
+internal class InternalFileLogger(string category
+        , FileLoggerOptions options
+        , LocalFileLoggerProcessor fileLogger
+        , IExternalScopeProvider scopeProvider
+        , LogLevel logLevel) : ILogger
 {
-    private readonly string category;
-    private LogLevel enableLevel;
-    private readonly LocalFileLogger fileLogger;
-    private readonly LoggerExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
-    public InternalFileLogger(string category, IOptions<LoggerSetting> options, LocalFileLogger fileLogger)
-    {
-        this.category = category;
-        this.fileLogger = fileLogger;
-        Setting = options.Value;
-        Setting.LogLevelSettingChanged += Setting_Changed;
-        enableLevel = Setting.GetLogLevel(LogType.File, category);
-    }
-
-    private void Setting_Changed()
-    {
-        enableLevel = Setting.GetLogLevel(LogType.File, category);
-    }
-    ~InternalFileLogger()
-    {
-        Setting.LogLevelSettingChanged -= Setting_Changed;
-    }
-    private LoggerSetting Setting { get; set; }
+    public IExternalScopeProvider ScopeProvider { get; set; } = scopeProvider;
+    public FileLoggerOptions Setting { get; set; } = options;
+    public LogLevel MinLevel { get; set; } = logLevel;
+    [ThreadStatic]
+    private static StringWriter? t_stringWriter;
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
-        return _scopeProvider.Push(state);
+        return ScopeProvider.Push(state);
     }
 
     public bool IsEnabled(LogLevel logLevel)
     {
-        return logLevel >= enableLevel;
+        return logLevel >= MinLevel;
     }
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -49,29 +31,31 @@ internal class InternalFileLogger : ILogger
         {
             return;
         }
-
-        if (state?.ToString() == null)
+        LogEntry<TState> logEntry = new(logLevel, category, eventId, state, exception, formatter);
+        t_stringWriter ??= new();
+        Formatter.FormatFileContent(logEntry, ScopeProvider, t_stringWriter, Setting);
+        var sb = t_stringWriter.GetStringBuilder();
+        if (sb.Length == 0)
         {
             return;
         }
+        string message = sb.ToString();
+        sb.Clear();
+        //var logInfo = new LogInfo()
+        //{
+        //    LogLevel = logLevel,
+        //    Message = formatter.Invoke(state, exception),
+        //    EventId = eventId.Id,
+        //    State = state,
+        //    EventName = eventId.Name,
+        //    Category = category,
+        //    Exception = exception
+        //};
 
-        var logInfo = new LogInfo()
-        {
-            LogLevel = logLevel,
-            Message = formatter.Invoke(state, exception),
-            EventId = eventId.Id,
-            State = state,
-            EventName = eventId.Name,
-            Category = category,
-            Exception = exception
-        };
+        //ScopeProvider.ForEachScope(static (scope, list) => list.Add(scope), logInfo.Scopes);
 
-        _scopeProvider.ForEachScope(static (scope, list) => list.Add(scope), logInfo.Scopes);
-
-        if (Setting.FileLogInfoFilter(logInfo))
-        {
-            fileLogger.WriteLog(logInfo);
-        }
+        fileLogger.WriteLog(category, message);
     }
+
 }
 #endif

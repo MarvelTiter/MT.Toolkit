@@ -7,7 +7,16 @@ using System.Threading.Tasks;
 
 namespace LoggerProviderExtensions.DbLogger;
 
+/// <summary>
+/// 数据库日志记录接口
+/// </summary>
 public interface IDbLogger
 {
-    Task LogAsync(LogInfo data, CancellationToken cancellationToken);
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="item"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task LogAsync(DbLogItem item, CancellationToken cancellationToken);
 }

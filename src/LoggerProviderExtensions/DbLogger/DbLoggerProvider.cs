@@ -7,64 +7,103 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace LoggerProviderExtensions.DbLogger;
 
-internal class DbLoggerProvider : ILoggerProvider
+[UnsupportedOSPlatform("browser")]
+[ProviderAlias(ALIAS_NAME)]
+internal class DbLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
+    public const string FULL_NAME = "LoggerProviderExtensions.DbLogger.DbLoggerProvider";
+    public const string ALIAS_NAME = "DatabaseLog";
     private readonly ConcurrentDictionary<string, InternalDbLogger> loggers = new();
-    private readonly Lazy<DatabaseLogger> dbLogger;
-    private readonly IConfiguration configuration;
-    private readonly IOptions<LoggerSetting> option;
+    private readonly Lazy<DatabaseLoggerProcessor> dbLogger;
+    private readonly IOptionsMonitor<DbLoggerOptions> option;
     private readonly IServiceProvider serviceProvider;
-    private IDisposable reload;
+    private readonly IOptionsMonitor<LoggerFilterOptions> filters;
+    private readonly IDisposable? reload;
+    private readonly IDisposable? reloadFilters;
+    private IExternalScopeProvider scopeProvider = NullScopeProvider.Instance;
 
-    public DbLoggerProvider(IOptions<LoggerSetting> option, IServiceProvider serviceProvider, IConfiguration configuration)
+    public DbLoggerProvider(IOptionsMonitor<DbLoggerOptions> option, IServiceProvider serviceProvider, IOptionsMonitor<LoggerFilterOptions> filters)
     {
         this.option = option;
         this.serviceProvider = serviceProvider;
-        if (option.Value.DbLoggerFacotry == null)
+        this.filters = filters;
+        if (option.CurrentValue.DbLoggerFacotry == null)
         {
-            option.Value.DbLoggerFacotry = GetDbLogger;
+            option.CurrentValue.DbLoggerFacotry = GetDbLogger;
         }
-        dbLogger = DatabaseLogger.GetDbLogger(option.Value);
-        this.configuration = configuration;
-        Set();
-        reload = ChangeToken.OnChange(() => this.configuration.GetReloadToken(), Set);
+        dbLogger = DatabaseLoggerProcessor.GetDbLogger(option.CurrentValue);
+        ReloadOptions(this.option.CurrentValue);
+        reload = this.option.OnChange(ReloadOptions);
+        ReApplyFilters(this.filters.CurrentValue);
+        reloadFilters = this.filters.OnChange(ReApplyFilters);
     }
-    private void Set()
+    private void ReloadOptions(DbLoggerOptions options)
     {
-        var set = configuration.GetSection("Logging:SimpleDatabaseLogger").GetChildren();
-        if (!set.Any()) return;
-        foreach (var item in set)
+        dbLogger.Value.LogConfig = options;
+        foreach (var item in loggers)
         {
-            var key = item.Key;
-            var value = item.Value;
-            if (key is null || value is null) continue;
-            if (Enum.TryParse(typeof(LogLevel), value, out var result) && result is LogLevel logLevel)
+            item.Value.Setting = options;
+        }
+    }
+    private void ReApplyFilters(LoggerFilterOptions options)
+    {
+        foreach (var item in loggers)
+        {
+            if (options.TryGetOverriddenSettingFilter(FULL_NAME, ALIAS_NAME, item.Key, out var rule, out var isProviderScope))
             {
-                option.Value.AddOrUpdate(LogType.File, key, logLevel);
+                var level = rule.LogLevel;
+                if (level.HasValue)
+                {
+                    if (isProviderScope || level.Value >= option.CurrentValue.MinLevel)
+                    {
+                        item.Value.MinLevel = level.Value;
+                    }
+                }
             }
         }
-        option.Value.NotifyLogLevelSettingChanged();
     }
     IDbLogger GetDbLogger()
     {
-        var obj = serviceProvider.GetService<IDbLogger>() ?? throw new ArgumentNullException();
+        var obj = serviceProvider.GetRequiredService<IDbLogger>();
         return obj;
     }
 
     public ILogger CreateLogger(string categoryName)
     {
-        return loggers.GetOrAdd(categoryName, new InternalDbLogger(categoryName, option, dbLogger.Value));
+        return loggers.GetOrAdd(categoryName, c =>
+        {
+            filters.CurrentValue.TryGetOverriddenSettingFilter(FULL_NAME, ALIAS_NAME, c, out var rule, out var isProviderScope);
+            var logLevel = rule?.LogLevel;
+            var fallback = option.CurrentValue.MinLevel;
+            // LocalFile下设置的LogLevel优先级最高，直接使用
+            // 否则，全局设置的LogLevel需要比LocalFile的MinLevel更高才能生效
+            LogLevel level = logLevel.HasValue
+                ? (isProviderScope ? logLevel.Value : (logLevel.Value > fallback ? logLevel.Value : fallback))
+                : fallback;
+            return new InternalDbLogger(categoryName, option.CurrentValue, dbLogger.Value, scopeProvider, level);
+        });
     }
 
     public void Dispose()
     {
         loggers.Clear();
         reload?.Dispose();
+        reloadFilters?.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    public void SetScopeProvider(IExternalScopeProvider scopeProvider)
+    {
+        this.scopeProvider = scopeProvider;
+        foreach (var item in loggers)
+        {
+            item.Value.ScopeProvider = scopeProvider;
+        }
     }
 }

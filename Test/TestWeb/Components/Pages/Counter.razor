@@ -9,18 +9,5 @@
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
-    private int currentCount = 0;
-
-    private void IncrementCount()
-    {
-        currentCount++;
-        using (var _1 = Logger.BeginScope("Scope1"))
-        {
-            using (var _2 = Logger.BeginScope("Scope2"))
-            {
-                Logger.LogInformation("测试");
-            }
-            Logger.LogInformation("测试");
-        }
-    }
+    
 }

@@ -10,21 +10,21 @@ using System.Threading;
 using System.Threading.Tasks;
 namespace LoggerProviderExtensions.FileLogger;
 
-internal class DeleteLogFileService(IOptionsMonitor<LoggerSetting> config) : BackgroundService
+internal class DeleteLogFileService(IOptionsMonitor<FileLoggerOptions> config) : BackgroundService
 {
-    private readonly int? savedDays = config.CurrentValue.FileSavedDays;
+    //private readonly int? savedDays = config.CurrentValue.FileSavedDays;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!savedDays.HasValue)
-        {
-            return ;
-        }
+        //if (!savedDays.HasValue)
+        //{
+        //    return ;
+        //}
 
-        if (savedDays.Value < 0)
-        {
-            return ;
-        }
+        //if (config.CurrentValue.FileSavedDays < 0)
+        //{
+        //    return ;
+        //}
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -36,7 +36,7 @@ internal class DeleteLogFileService(IOptionsMonitor<LoggerSetting> config) : Bac
             try
             {
                 var files = Directory.EnumerateFiles(logPath);
-                var deadline = DateTime.Now.AddDays(-1 * savedDays.Value);
+                var deadline = DateTime.Now.AddDays(-1 * config.CurrentValue.FileSavedDays);
                 foreach (var file in files)
                 {
                     var fileinfo = new FileInfo(file);

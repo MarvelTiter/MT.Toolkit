@@ -1,34 +1,38 @@
-﻿using System.Collections.Concurrent;
+﻿using LoggerProviderExtensions.FileLogger;
+using System.Collections.Concurrent;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace LoggerProviderExtensions;
 
-public class LocalFileLogger 
+internal class LocalFileLoggerProcessor
 {
-    struct LogItem
+    readonly struct LogItem(string path, string content)
     {
-        public string Path { get; set; }
-        public string Content { get; set; }
+        public string Path { get; } = path;
+        public string Content { get; } = content;
     }
-    private static Lazy<LocalFileLogger>? _instance;
 
-    public static Lazy<LocalFileLogger> GetFileLogger(LoggerSetting configuration)
+    private static Lazy<LocalFileLoggerProcessor>? _instance;
+
+    public static Lazy<LocalFileLoggerProcessor> GetFileLogger(FileLoggerOptions configuration)
     {
-        _instance ??= new Lazy<LocalFileLogger>(() =>
+        _instance ??= new Lazy<LocalFileLoggerProcessor>(() =>
         {
-            return new LocalFileLogger(configuration);
+            return new LocalFileLoggerProcessor(configuration);
         });
         return _instance;
     }
 
-    public LoggerSetting LogConfig { get; set; }
+    public FileLoggerOptions LogConfig { get; set; }
 
-    static readonly ConcurrentQueue<LogItem> logQueue = new ConcurrentQueue<LogItem>();
+    static readonly ConcurrentQueue<LogItem> logQueue = new();
 
-    private string separator = "----------------------------------------------------------------------------------------------------------------------";
-    Task writeTask;
-    CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
-    private LocalFileLogger(LoggerSetting configuration)
+    private const string SEPARATOR = "----------------------------------------------------------------------------------------------------------------------";
+    private readonly Task writeTask;
+    private readonly CancellationTokenSource CancellationTokenSource = new();
+    private readonly Dictionary<string, StringBuilder> logBuffer = [];
+    private LocalFileLoggerProcessor(FileLoggerOptions configuration)
     {
         LogConfig = configuration;
         var token = CancellationTokenSource.Token;
@@ -38,46 +42,34 @@ public class LocalFileLogger
            {
                // 阻塞1秒
                token.WaitHandle.WaitOne(TimeSpan.FromSeconds(1));
-               List<string[]> temp = new List<string[]>();
-               
-               while(logQueue.TryDequeue(out var logItem))
+
+               while (logQueue.TryDequeue(out var logItem))
                {
                    string logPath = logItem.Path;
-                   string logMergeContent = $"{logItem.Content}{separator}{Environment.NewLine}";
-                   string[]? logArr = temp.FirstOrDefault(d => d[0].Equals(logPath));
-                   if (logArr != null)
+                   if (!logBuffer.TryGetValue(logPath, out var sb))
                    {
-                       logArr[1] = string.Concat(logArr[1], logMergeContent);
+                       logBuffer.Add(logPath, sb = new StringBuilder());
                    }
-                   else
-                   {
-                       logArr =
-                       [
-                           logPath,
-                            logMergeContent
-                       ];
-                       temp.Add(logArr);
-                   }
+                   sb.Append(logItem.Content);
+                   sb.Append(SEPARATOR);
+                   sb.Append(Environment.NewLine);
                }
 
-               foreach (var item in temp)
+               foreach (var item in logBuffer)
                {
-                   WriteText(item[0], item[1]);
+                   WriteText(item.Key, item.Value.ToString());
+                   item.Value.Clear();
                }
            }
        }, token, TaskCreationOptions.LongRunning);
         writeTask.Start();
     }
-    public void WriteLog(LogInfo logInfo)
+    public void WriteLog(string category, string message)
     {
-        logQueue.Enqueue(new LogItem
-        {
-            Path = GetLogPath(LogConfig, logInfo.Category),
-            Content = logInfo.FormatLogMessage()
-        });
+        logQueue.Enqueue(new LogItem(GetLogPath(LogConfig, category), message));
     }
 
-    private static string GetLogPath(LoggerSetting setting, string? category)
+    private static string GetLogPath(FileLoggerOptions setting, string? category)
     {
         string newFilePath;
         var logDir = setting.LogFileFolder ?? Path.Combine(Environment.CurrentDirectory, "logs");
@@ -130,7 +122,7 @@ public class LocalFileLogger
         }
     }
 
-    ~LocalFileLogger()
+    ~LocalFileLoggerProcessor()
     {
         CancellationTokenSource.Cancel();
         writeTask.Wait();

@@ -3,6 +3,12 @@ using LoggerProviderExtensions.FileLogger;
 using Microsoft.Extensions.Logging;
 namespace LoggerProviderExtensions;
 
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
+
+/// <summary>
+/// 
+/// </summary>
+[Obsolete("使用FileLoggerOptions")]
 public static class LoggerSettingExtensions
 {
     public static bool IsEnabled(this LoggerSetting loggerSetting, LogType logType, string? category, LogLevel logLevel)
@@ -33,15 +39,21 @@ public static class LoggerSettingExtensions
         var info = loggerSetting.LogLimit[logType];
         return info.GetLevel(category);
     }
+    [Obsolete]
     public static void SetFileWriteLevel<T>(this IFileLoggerSetting loggerSetting, LogLevel logLevel)
     {
         loggerSetting.SetFileWriteLevel(typeof(T).FullName!, logLevel);
     }
+    [Obsolete]
     public static void SetDbWriteLevel<T>(this IDbLoggerSetting loggerSetting, LogLevel logLevel)
     {
         loggerSetting.SetDbWriteLevel(typeof(T).FullName!, logLevel);
     }
 }
+/// <summary>
+/// 
+/// </summary>
+[Obsolete("使用FileLoggerOptions")]
 public class LoggerSetting : IFileLoggerSetting, IDbLoggerSetting
 {
     private static readonly Lazy<LoggerSetting> setting = new(() => new());
