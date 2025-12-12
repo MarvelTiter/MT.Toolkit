@@ -7,10 +7,9 @@ namespace MapperTest
 {
     public class DbLogger : IDbLogger
     {
-        public async Task LogAsync(LogInfo data, CancellationToken cancellationToken)
+        public Task LogAsync(DbLogItem item, CancellationToken cancellationToken)
         {
-            await Task.Delay(100, cancellationToken);
-            Console.WriteLine(data.FormatLogMessage());
+            return Task.FromResult(0);
         }
     }
     [TestClass]

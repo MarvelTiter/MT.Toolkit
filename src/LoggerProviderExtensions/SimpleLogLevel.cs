@@ -1,8 +1,10 @@
 ﻿using System;
 
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 namespace LoggerProviderExtensions;
 
 [Flags]
+[Obsolete("不再使用")]
 public enum LogType
 {
     File = 1,
@@ -13,6 +15,9 @@ public enum LogType
 /// </summary>
 public enum SimpleLogLevel
 {
+    /// <summary>
+    /// 
+    /// </summary>
     Trace,
     /// <summary>
     /// 信息级别
@@ -34,5 +39,8 @@ public enum SimpleLogLevel
     /// 致命级别
     /// </summary>
     Critical,
+    /// <summary>
+    /// 
+    /// </summary>
     None,
 }

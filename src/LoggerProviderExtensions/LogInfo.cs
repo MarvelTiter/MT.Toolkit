@@ -3,8 +3,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
 namespace LoggerProviderExtensions;
 
+[Obsolete("不再使用")]
 public class LogInfo
 {
     /// <summary>
@@ -48,11 +50,13 @@ public class LogInfo
 /// <summary>
 /// 日志信息
 /// </summary>
+[Obsolete("不再使用")]
 public class LogInfo<TState> : LogInfo
 {
     public new TState? State { get; set; }
 }
 
+[Obsolete("不再使用")]
 public static class LogInfoExtensions
 {
     public static string FormatLogMessage(this LogInfo self)

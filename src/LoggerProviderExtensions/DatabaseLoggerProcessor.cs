@@ -26,7 +26,6 @@ public readonly struct DbLogItem(string content, bool isException, DateTimeOffse
 }
 internal class DatabaseLoggerProcessor
 {
-
     private static Lazy<DatabaseLoggerProcessor>? _instance;
     private Lazy<IDbLogger>? _dbLogger;
     private Lazy<IDbLogger> DbLogger => _dbLogger ??= new Lazy<IDbLogger>(() =>

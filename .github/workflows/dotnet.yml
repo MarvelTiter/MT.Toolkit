@@ -22,7 +22,7 @@ jobs:
         dotnet-version: 8.0.x
     - name: Build
       run: |
-        dotnet build -c Release
+        dotnet build .\Toolkit.slnx -c Release
         dotnet pack ./src/Toolkit/Toolkit.csproj -c Release -o publish
         dotnet pack ./src/SoapRequestHelper/SoapRequestHelper.csproj -c Release -o publish
         dotnet pack ./src/LoggerProviderExtensions/LoggerProviderExtensions.csproj -c Release -o publish
