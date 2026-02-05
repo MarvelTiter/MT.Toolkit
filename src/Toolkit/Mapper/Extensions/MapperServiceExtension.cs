@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.Mapper.Extensions
 {
+    [Obsolete("使用AutoGenMapperGenerator代替")]
 	public static class MapperServiceExtension
-	{
+    {
 		public static IServiceCollection AddSimpleMapper(this IServiceCollection services)
 		{
 			var mapper = new SimpleMapper();

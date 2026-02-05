@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.DateTimeExtension
 {
+	/// <summary>
+	/// 
+	/// </summary>
 	public static class DateTimeExtensions
 	{
 		/// <summary>

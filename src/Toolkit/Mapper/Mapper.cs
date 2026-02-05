@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace MT.Toolkit.Mapper
 {
+    [Obsolete("使用AutoGenMapperGenerator代替")]
     public interface ISimpleMapper
     {
         TTarget Map<TFrom, TTarget>(TFrom source);
@@ -10,6 +11,7 @@ namespace MT.Toolkit.Mapper
         MapperConfig Configuration { get; }
     }
     
+    [Obsolete("使用AutoGenMapperGenerator代替")]
     public class SimpleMapper : ISimpleMapper
     {
         private readonly Mapper _map;
@@ -34,6 +36,7 @@ namespace MT.Toolkit.Mapper
         }
     }
 
+    [Obsolete("使用AutoGenMapperGenerator代替")]
     public class Mapper
     {
         public static TValue Map<TValue>(TValue source)

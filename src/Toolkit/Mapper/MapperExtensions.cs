@@ -2,6 +2,7 @@
 
 namespace MT.Toolkit.Mapper
 {
+    [Obsolete("使用AutoGenMapperGenerator代替")]
     public static partial class MapperExtensions
     {
         /// <summary>

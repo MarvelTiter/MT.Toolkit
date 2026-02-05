@@ -7,6 +7,9 @@ using System.Linq;
 
 namespace MT.Toolkit.ReflectionExtension
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public static class MemberInfoExtension
     {
 
