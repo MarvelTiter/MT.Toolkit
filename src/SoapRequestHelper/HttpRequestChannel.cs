@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 namespace SoapRequestHelper;
 
 /// <summary>

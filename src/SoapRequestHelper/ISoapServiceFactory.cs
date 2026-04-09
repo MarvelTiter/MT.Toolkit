@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SoapRequestHelper;
+﻿namespace SoapRequestHelper;
 
 /// <summary>
 /// SOAP服务工厂

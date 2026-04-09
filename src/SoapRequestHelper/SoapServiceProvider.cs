@@ -1,23 +1,17 @@
-﻿using System;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http;
+﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 namespace SoapRequestHelper;
 
-internal class SoapServiceProvider : ISoapServiceFactory
+internal class SoapServiceProvider(ISoapServiceManager soapServiceManager
+        , ILogger<ISoapServiceFactory> logger
+        , IHttpClientFactory clientFactory
+        , IServiceProvider serviceProvider) : ISoapServiceFactory
 {
-    private readonly ISoapServiceManager soapServiceManager;
-    private readonly ILogger logger;
+    private readonly ILogger logger = logger;
     private readonly ConcurrentDictionary<string, SoapService> services = [];
     private bool disposedValue;
-    public SoapServiceProvider(ISoapServiceManager soapServiceManager
-        , ILogger<ISoapServiceFactory> logger)
-    {
-        this.soapServiceManager = soapServiceManager;
-        this.logger = logger;
-    }
+
     public ISoapService? Default
     {
         get
@@ -39,6 +33,14 @@ internal class SoapServiceProvider : ISoapServiceFactory
          {
              if (soapServiceManager.Configs.TryGetValue(name, out var config))
              {
+                 if (config.ClientPoolFactory is not null)
+                 {
+                     config.UseHttpClientPool(config.ClientPoolFactory(serviceProvider));
+                 }
+                 else if (config.HttpClientPool is null)
+                 {
+                     config.UseHttpClientPool(new EmptyPool(clientFactory));
+                 }
                  return new SoapService(config, Log);
              }
              throw new ArgumentNullException($"未注册SoapService[{name}]");

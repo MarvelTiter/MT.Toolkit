@@ -1,34 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Http;
-using System.Reflection;
-using System.Reflection.Metadata;
+﻿using System.Diagnostics;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 namespace SoapRequestHelper;
 
-internal partial class SoapService : ISoapService//, IDisposable
+internal partial class SoapService : ISoapService
 {
-    private const string SLASH = "/";
-    private readonly string? url;
-    private readonly SoapVersion? version;
     private readonly Action<string> logAction;
-    private readonly string? requestNamespace;
-    private readonly string? responseNamespace;
-    private readonly SoapServiceConfiguration? configuration;
+    private readonly SoapServiceConfiguration configuration;
     private bool disposedValue;
-    private readonly HttpClientPool httpClientPool;
+    private readonly IHttpClientPool httpClientPool;
     #region 属性
-    private string Url => configuration?.Url ?? url ?? throw new ArgumentNullException();
-    private SoapVersion Version => configuration?.Version ?? version ?? SoapVersion.Soap11;
-    private string RequestNamespace => configuration?.RequestNamespace ?? requestNamespace ?? "http://tempuri.org/";
-    private string ResponseNamespace => configuration?.ResponseNamespace ?? responseNamespace ?? "http://tempuri.org/";
+    private string Url => configuration.Url ?? throw new ArgumentNullException();
+    private SoapVersion Version => configuration.Version ?? SoapVersion.Soap11;
+    private string RequestNamespace => configuration.RequestNamespace ?? "http://tempuri.org/";
+    private string ResponseNamespace => configuration.ResponseNamespace ?? "http://tempuri.org/";
     private string EnvelopeNs
     {
         get
@@ -83,7 +70,7 @@ internal partial class SoapService : ISoapService//, IDisposable
     #endregion
     private readonly HttpRequestChannel<SoapRequest, HttpResponseMessage> requestChannel;
 
-    private record SoapRequest(
+    private readonly record struct SoapRequest(
         HttpClient Client,
         string MethodName,
         HttpRequestMessage RequestMessage,
@@ -95,64 +82,17 @@ internal partial class SoapService : ISoapService//, IDisposable
     {
         this.configuration = configuration;
         this.logAction = logAction;
-        //this.httpClient = this.clientFactory.CreateClient(configuration.Name);
         requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
-        if (configuration.ClientProvider is not null)
-        {
-            httpClientPool = new HttpClientPool(configuration.ClientProvider, configuration.QueueCapacity);
-        }
-        else
-        {
-            httpClientPool = new HttpClientPool(configuration.QueueCapacity);
-        }
+        httpClientPool = configuration.HttpClientPool;
     }
 
-    public SoapService(string url, Action<string> logAction)
-        : this(url, SoapVersion.Soap11, "http://tempuri.org/", logAction)
+    public SoapService(string name, Action<SoapServiceConfiguration> configAction, Action<string> logAction)
     {
-    }
-
-    public SoapService(string url
-        , string @namespace
-        , Action<string> logAction)
-        : this(url, SoapVersion.Soap11, @namespace, logAction)
-    {
-    }
-
-    public SoapService(string url
-        , SoapVersion version
-        , string @namespace
-        , Action<string> logAction)
-        : this(url, version, @namespace, @namespace, logAction)
-    {
-    }
-
-    public SoapService(string url
-        , SoapVersion version
-        , string requestNamespace
-        , string responseNamespace
-        , Action<string> logAction
-        , int? queueCapacity = null
-        , int? concurrent = null
-        , Func<HttpClient>? clientProvider = null)
-    {
-        this.url = url;
-        this.version = version;
         this.logAction = logAction;
-        this.requestNamespace = requestNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
-        this.responseNamespace = responseNamespace.EndsWith(SLASH) ? requestNamespace : requestNamespace + '/';
-        //this.httpClient = this.clientFactory.CreateClient(url);
-        requestChannel = new(queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY, concurrent ?? SoapServiceConfiguration.DEFAULT_CONCURRENCY_LIMIT, ProcessSoapRequest);
-        if (clientProvider is not null)
-        {
-            httpClientPool = new(clientProvider, queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY);
-        }
-        else
-        {
-            httpClientPool = new HttpClientPool(
-                queueCapacity ?? SoapServiceConfiguration.DEFAULT_QUEUE_CAPACITY
-            );
-        }
+        configuration = new SoapServiceConfiguration(name);
+        configAction(configuration);
+        requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
+        httpClientPool = configuration.HttpClientPool ?? throw new ArgumentNullException("未配置连接池");
     }
     #endregion
 
@@ -165,7 +105,6 @@ internal partial class SoapService : ISoapService//, IDisposable
         var elapsed = StopwatchHelper.GetElapsedTime(start);
         response.EnsureSuccessStatusCode();
         logAction($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
-        Debug.WriteLine($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
         return response;
     }
 
@@ -173,7 +112,7 @@ internal partial class SoapService : ISoapService//, IDisposable
     {
         //var client = clientFactory.CreateClient(configuration?.Name ?? Url);
         //using var client = new HttpClient();
-        var client = await httpClientPool.GetAsync(cancellationToken);
+        var client = await httpClientPool.GetAsync(new(configuration?.Name ?? Url, methodName, args), cancellationToken);
         try
         {
             var response = await SendAsync(client, methodName, args, cancellationToken);
@@ -205,8 +144,11 @@ internal partial class SoapService : ISoapService//, IDisposable
             await requestChannel.WriteAsync(request);
 
             using var response = await tcs.Task;
-
-            // 处理响应
+            var start = StopwatchHelper.GetTimestamp();
+            //var response = await client.SendAsync(requestMessage, cancellationToken);
+            //// 处理响应
+            //var elapsed = StopwatchHelper.GetElapsedTime(start);
+            //logAction($"methodName: {elapsed}");
             var soapResponse = await HandleResponse(response, methodName, content, cancellationToken);
             return soapResponse;
         }

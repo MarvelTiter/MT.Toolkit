@@ -1,5 +1,5 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Diagnostics.CodeAnalysis;
+using static SoapRequestHelper.SoapServiceConfiguration;
 
 namespace SoapRequestHelper;
 /// <summary>
@@ -7,7 +7,7 @@ namespace SoapRequestHelper;
 /// </summary>
 public class SoapServiceConfiguration
 {
-    internal const int DEFAULT_CONCURRENCY_LIMIT = 10;
+    internal const int DEFAULT_CONCURRENCY_LIMIT = 20;
     internal const int DEFAULT_QUEUE_CAPACITY = 100;
     internal SoapServiceConfiguration(string name)
     {
@@ -17,10 +17,7 @@ public class SoapServiceConfiguration
     /// 配置名称
     /// </summary>
     public string Name { get; set; }
-    /// <summary>
-    /// 
-    /// </summary>
-    public Func<HttpClient>? ClientProvider { get; set; }
+
     /// <summary>
     /// 服务地址
     /// </summary>
@@ -45,5 +42,65 @@ public class SoapServiceConfiguration
     /// 并发数量
     /// </summary>
     public int ConcurrencyLimit { get; set; }
+
+
+
+    /// <summary>
+    /// 连接池配置对象
+    /// </summary>
+    public class DefaultHttpClientPoolSetting
+    {
+        /// <summary>
+        /// 自定义HttpClient创建
+        /// </summary>
+        public Func<HttpClient>? ClientProvider { get; set; }
+        /// <summary>
+        /// 池大小，默认<see cref="DEFAULT_CONCURRENCY_LIMIT"/>
+        /// </summary>
+        public int HttpClientPoolSize { get; set; } = DEFAULT_CONCURRENCY_LIMIT;
+        /// <summary>
+        /// 等待实例超时时间，默认30s
+        /// </summary>
+        public TimeSpan WaitTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    }
+
+    [NotNull] internal IHttpClientPool? HttpClientPool { get; set; }
+    internal Func<IServiceProvider, IHttpClientPool>? ClientPoolFactory { get; set; }
+    /// <summary>
+    /// 配置HttpClient连接池
+    /// </summary>
+    public void UseHttpClientPool(IHttpClientPool pool)
+    {
+        HttpClientPool = pool;
+    }
+}
+
+/// <summary>
+/// 
+/// </summary>
+public static class SoapServiceConfigurationEx
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="configuration"></param>
+    /// <param name="action"></param>
+    public static void UseDefaultHttpClientPool(this SoapServiceConfiguration configuration, Action<DefaultHttpClientPoolSetting>? action = null)
+    {
+        var setting = new DefaultHttpClientPoolSetting();
+        action?.Invoke(setting);
+        configuration.UseHttpClientPool(new DefaultHttpClientPool(setting));
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="configuration"></param>
+    /// <param name="factory"></param>
+    public static void UseHttpClientPool(this SoapServiceConfiguration configuration, Func<IServiceProvider, IHttpClientPool> factory)
+    {
+        configuration.ClientPoolFactory = factory;
+    }
 }
 

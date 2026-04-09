@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Xml;
+﻿using System.Xml;
 using System.Xml.Linq;
-using System.Xml.XPath;
 
 namespace SoapRequestHelper.XmlHelper;
 

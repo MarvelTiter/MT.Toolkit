@@ -1,29 +1,27 @@
 ﻿using System.Collections.Concurrent;
+using static SoapRequestHelper.SoapServiceConfiguration;
 namespace SoapRequestHelper;
 
 /// <summary>
 /// HttpClient实例池，大小与队列容量一致
 /// </summary>
-internal class HttpClientPool : IAsyncDisposable
+internal class DefaultHttpClientPool : IHttpClientPool
 {
     private readonly ConcurrentQueue<HttpClient> pool = new();
     private readonly int poolSize;
     private bool isDisposed;
     private readonly object initLock = new();
     private readonly Func<HttpClient> httpClientFactory;
+    private readonly TimeSpan timeout;
     /// <summary>
     /// 直接创建 HttpClient 实例池
     /// </summary>
-    public HttpClientPool(int poolSize)
+
+    public DefaultHttpClientPool(DefaultHttpClientPoolSetting poolSetting)
     {
-        httpClientFactory = () => new HttpClient();
-        this.poolSize = poolSize;
-        InitializePool();
-    }
-    public HttpClientPool(Func<HttpClient> httpClientFactory, int poolSize)
-    {
-        this.httpClientFactory = httpClientFactory;
-        this.poolSize = poolSize;
+        httpClientFactory = poolSetting.ClientProvider ?? (() => new HttpClient());
+        poolSize = poolSetting.HttpClientPoolSize;
+        timeout = poolSetting.WaitTimeout;
         InitializePool();
     }
 
@@ -51,23 +49,16 @@ internal class HttpClientPool : IAsyncDisposable
     /// <summary>
     /// 从池中获取一个 HttpClient 实例
     /// </summary>
-    public async Task<HttpClient> GetAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<HttpClient> GetAsync(HttpClientCreationContext context, CancellationToken cancellationToken = default)
     {
-        if (isDisposed)
-            throw new ObjectDisposedException(nameof(HttpClientPool));
-
+        ObjectDisposedException.ThrowIf(isDisposed, this);
         if (pool.TryDequeue(out var client))
         {
             return client;
         }
 
-        // 如果池为空（理论上不应该发生），等待或创建新实例
-        // 这里选择等待其他客户端返回
-        var tcs = new TaskCompletionSource<HttpClient>();
-        var waitStartTime = DateTime.UtcNow;
-
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(30)); // 30秒超时
+        cts.CancelAfter(timeout);
 
         try
         {
@@ -77,11 +68,9 @@ internal class HttpClientPool : IAsyncDisposable
                 {
                     return client;
                 }
-
                 await Task.Delay(10, cts.Token).ConfigureAwait(false);
             }
-
-            throw new TimeoutException("Timeout waiting for HttpClient from pool");
+            return CreateHttpClient();
         }
         catch (OperationCanceledException)
         {
@@ -109,30 +98,28 @@ internal class HttpClientPool : IAsyncDisposable
             // 简单的健康检查：确保客户端没有被处置
             // 注意：HttpClient 没有 IsDisposed 属性，我们需要其他方式检查
             _ = client.BaseAddress; // 如果已处置，这会抛出异常
-            pool.Enqueue(client);
+            TryEnqueue(client);
         }
         catch (ObjectDisposedException)
         {
             // 如果客户端已被处置，创建新的替代
-            var newClient = CreateHttpClient();
-            pool.Enqueue(newClient);
+            if (pool.Count < poolSize)
+            {
+                var newClient = CreateHttpClient();
+                TryEnqueue(newClient);
+            }
         }
-    }
 
-    /// <summary>
-    /// 执行一个使用 HttpClient 的操作
-    /// </summary>
-    public async Task<T> UseAsync<T>(Func<HttpClient, Task<T>> operation, CancellationToken cancellationToken = default)
-    {
-        var client = await GetAsync(cancellationToken).ConfigureAwait(false);
-
-        try
+        void TryEnqueue(HttpClient returnedClient)
         {
-            return await operation(client).ConfigureAwait(false);
-        }
-        finally
-        {
-            Return(client);
+            if (pool.Count < poolSize)
+            {
+                pool.Enqueue(returnedClient);
+            }
+            else
+            {
+                returnedClient.Dispose();
+            }
         }
     }
 
