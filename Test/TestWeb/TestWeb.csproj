@@ -11,8 +11,4 @@
     <ProjectReference Include="..\..\src\Toolkit\Toolkit.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="logs\" />
-  </ItemGroup>
-
 </Project>

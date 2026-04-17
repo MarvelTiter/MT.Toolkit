@@ -1,6 +1,7 @@
 ﻿#if NET6_0_OR_GREATER
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
 
 namespace LoggerProviderExtensions.FileLogger;
 
@@ -31,30 +32,44 @@ internal class InternalFileLogger(string category
         {
             return;
         }
-        LogEntry<TState> logEntry = new(logLevel, category, eventId, state, exception, formatter);
         t_stringWriter ??= new();
-        Formatter.FormatFileContent(logEntry, ScopeProvider, t_stringWriter, Setting);
         var sb = t_stringWriter.GetStringBuilder();
+        if (Setting.Structured)
+        {
+            var structuredLog = new StructuredLogEntry
+            {
+                Timestamp = Setting.UseUtcTimestamp
+                ? DateTimeOffset.UtcNow
+                : DateTimeOffset.Now,
+                LogLevel = logLevel,
+                Category = category,
+                EventId = eventId.Id,
+                EventName = eventId.Name,
+                // 提取消息模板（原始格式串，如 "用户 {UserId} 登录"）
+                MessageTemplate = state?.ToString(),
+
+                // 提取结构化属性
+                Properties = Formatter.ExtractProperties(state),
+                // 提取 Scope 数据
+                Scopes = Formatter.ExtractScopes(Setting.IncludeScopes, ScopeProvider),
+                Exception = exception
+            };
+            var sf = Setting.StructuredFormatter ?? SerilogCompactJsonFormatter.Default.Value;
+            sf.Format(t_stringWriter, structuredLog);
+        }
+        else
+        {
+            LogEntry<TState> logEntry = new(logLevel, category, eventId, state, exception, formatter);
+            Formatter.FormatFileContent(logEntry, ScopeProvider, t_stringWriter, Setting);
+        }
         if (sb.Length == 0)
         {
             return;
         }
         string message = sb.ToString();
         sb.Clear();
-        //var logInfo = new LogInfo()
-        //{
-        //    LogLevel = logLevel,
-        //    Message = formatter.Invoke(state, exception),
-        //    EventId = eventId.Id,
-        //    State = state,
-        //    EventName = eventId.Name,
-        //    Category = category,
-        //    Exception = exception
-        //};
 
-        //ScopeProvider.ForEachScope(static (scope, list) => list.Add(scope), logInfo.Scopes);
-
-        fileLogger.WriteLog(category, message);
+        fileLogger.WriteLog(category, message, logLevel);
     }
 
 }

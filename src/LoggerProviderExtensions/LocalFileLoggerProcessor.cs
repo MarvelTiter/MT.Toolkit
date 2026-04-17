@@ -1,11 +1,12 @@
 ﻿using LoggerProviderExtensions.FileLogger;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace LoggerProviderExtensions;
 
-internal class LocalFileLoggerProcessor
+internal partial class LocalFileLoggerProcessor
 {
     readonly struct LogItem(string path, string content)
     {
@@ -28,7 +29,6 @@ internal class LocalFileLoggerProcessor
 
     static readonly ConcurrentQueue<LogItem> logQueue = new();
 
-    private const string SEPARATOR = "----------------------------------------------------------------------------------------------------------------------";
     private readonly Task writeTask;
     private readonly CancellationTokenSource CancellationTokenSource = new();
     private readonly Dictionary<string, StringBuilder> logBuffer = [];
@@ -50,9 +50,7 @@ internal class LocalFileLoggerProcessor
                    {
                        logBuffer.Add(logPath, sb = new StringBuilder());
                    }
-                   sb.Append(logItem.Content);
-                   sb.Append(SEPARATOR);
-                   sb.Append(Environment.NewLine);
+                   sb.AppendLine(logItem.Content);
                }
 
                foreach (var item in logBuffer)
@@ -64,18 +62,18 @@ internal class LocalFileLoggerProcessor
        }, token, TaskCreationOptions.LongRunning);
         writeTask.Start();
     }
-    public void WriteLog(string category, string message)
+    public void WriteLog(string category, string message, LogLevel logLevel)
     {
-        logQueue.Enqueue(new LogItem(GetLogPath(LogConfig, category), message));
+        logQueue.Enqueue(new LogItem(GetLogPath(LogConfig, category, logLevel), message));
     }
 
-    private static string GetLogPath(FileLoggerOptions setting, string? category)
+    private static string GetLogPath(FileLoggerOptions setting, string? category, LogLevel logLevel)
     {
         string newFilePath;
         var logDir = setting.LogFileFolder ?? Path.Combine(Environment.CurrentDirectory, "logs");
         Directory.CreateDirectory(logDir);
         string extension = ".log";
-        string fileNameNotExt = !string.IsNullOrEmpty(category) && setting.SaveByCategory ? $"{DateTime.Now:yyyy-MM-dd}_{category}_Part" : $"{DateTime.Now:yyyy-MM-dd}_Part";
+        string fileNameNotExt = GetFileName(setting, category, logLevel);
         string fileNamePattern = string.Concat(fileNameNotExt, "*", extension);
         string[] filePaths = Directory.GetFiles(logDir, fileNamePattern, SearchOption.TopDirectoryOnly);
 
@@ -85,7 +83,7 @@ internal class LocalFileLoggerProcessor
             string lastFilePath = filePaths.Where(d => d.Length == fileMaxLen).OrderByDescending(d => d).First();
             if (new FileInfo(lastFilePath).Length > setting.LogFileSize)
             {
-                var no = new Regex(@"(?<=Part)(\d+)").Match(Path.GetFileName(lastFilePath)).Value;
+                var no = FileSuffixNumber().Match(Path.GetFileName(lastFilePath)).Value;
                 var parse = int.TryParse(no, out int tempno);
                 var formatno = $"{(parse ? tempno + 1 : tempno)}";
                 var newFileName = string.Concat(fileNameNotExt, formatno, extension);
@@ -103,6 +101,23 @@ internal class LocalFileLoggerProcessor
         }
 
         return newFilePath;
+
+        static string GetFileName(FileLoggerOptions setting, string? category, LogLevel logLevel)
+        {
+            var sb = new StringBuilder($"{DateTime.Now:yyyy-MM-dd}_");
+            if (!string.IsNullOrEmpty(category) && setting.SaveByCategory)
+            {
+                sb.Append(category);
+                sb.Append('_');
+            }
+            if (setting.SaveByLevel)
+            {
+                sb.Append(logLevel.GetLogLevelString());
+                sb.Append('_');
+            }
+            sb.Append("Part");
+            return sb.ToString();
+        }
     }
 
     private static void WriteText(string logPath, string logContent)
@@ -128,4 +143,7 @@ internal class LocalFileLoggerProcessor
         writeTask.Wait();
         writeTask.Dispose();
     }
+
+    [GeneratedRegex(@"(?<=Part)(\d+)")]
+    private static partial Regex FileSuffixNumber();
 }

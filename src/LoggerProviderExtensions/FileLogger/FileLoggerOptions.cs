@@ -69,6 +69,10 @@ public class FileLoggerOptions: BaseLoggerOptions
     /// </summary>
     public bool SaveByCategory { get; set; }
     /// <summary>
+    /// 按级别保存日志文件
+    /// </summary>
+    public bool SaveByLevel { get; set; }
+    /// <summary>
     /// <para>
     /// 文件日志记录的最小级别, 默认是Error, 低于此级别的日志将不会被记录到文件中
     /// </para>

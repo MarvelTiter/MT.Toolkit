@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace LoggerProviderExtensions.FileLogger;
+namespace LoggerProviderExtensions;
 
 /// <summary>
 /// 
@@ -20,5 +20,12 @@ public class BaseLoggerOptions
     /// 是否启用UTC时间
     /// </summary>
     public bool UseUtcTimestamp { get; set; }
-    
+    /// <summary>
+    /// 是否结构化日志
+    /// </summary>
+    public bool Structured { get; set; }
+    /// <summary>
+    /// 是否结构化日志
+    /// </summary>
+    public IStructuredLogger? StructuredFormatter { get; set; }
 }

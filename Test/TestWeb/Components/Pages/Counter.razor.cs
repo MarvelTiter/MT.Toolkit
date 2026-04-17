@@ -7,14 +7,14 @@ public partial class Counter
     private void IncrementCount()
     {
         currentCount++;
-        //using (var _1 = Logger.BeginScope("Scope1"))
-        //{
-        //    using (var _2 = Logger.BeginScope("Scope2"))
-        //    {
-        //        Logger.LogInformation("测试");
-        //    }
-        //    Logger.LogInformation("测试");
-        //}
+        using (var _1 = Logger.BeginScope("Scope{level}", 1))
+        {
+            using (var _2 = Logger.BeginScope("Scope{level}", 2))
+            {
+                Logger.LogInformation("测试");
+            }
+            Logger.LogInformation("测试");
+        }
         try
         {
             throw new Exception("测试");

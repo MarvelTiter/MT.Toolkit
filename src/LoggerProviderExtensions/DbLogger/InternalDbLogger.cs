@@ -38,26 +38,41 @@ internal class InternalDbLogger(string category
         {
             return;
         }
-        LogEntry<TState> logEntry = new(logLevel, category, eventId, state, exception, formatter);
         t_stringWriter ??= new();
-        Formatter.FormatDbContent(logEntry, ScopeProvider, t_stringWriter, Setting);
         var sb = t_stringWriter.GetStringBuilder();
+        if (Setting.Structured)
+        {
+            var structuredLog = new StructuredLogEntry
+            {
+                Timestamp = Setting.UseUtcTimestamp
+                ? DateTimeOffset.UtcNow
+                : DateTimeOffset.Now,
+                LogLevel = logLevel,
+                Category = category,
+                EventId = eventId.Id,
+                EventName = eventId.Name,
+                // 提取消息模板（原始格式串，如 "用户 {UserId} 登录"）
+                MessageTemplate = state?.ToString(),
+                // 提取结构化属性
+                Properties = Formatter.ExtractProperties(state),
+                // 提取 Scope 数据
+                Scopes = Formatter.ExtractScopes(Setting.IncludeScopes, ScopeProvider),
+                Exception = exception
+            };
+            var sf = Setting.StructuredFormatter ?? SerilogCompactJsonFormatter.Default.Value;
+            sf.Format(t_stringWriter, structuredLog);
+        }
+        else
+        {
+            LogEntry<TState> logEntry = new(logLevel, category, eventId, state, exception, formatter);
+            Formatter.FormatDbContent(logEntry, ScopeProvider, t_stringWriter, Setting);
+        }
         if (sb.Length == 0)
         {
             return;
         }
         string message = sb.ToString();
         sb.Clear();
-        //var logInfo = new LogInfo<TState>
-        //{
-        //    LogLevel = logLevel,
-        //    Message = formatter.Invoke(state, exception),
-        //    State = state,
-        //    EventId = eventId.Id,
-        //    EventName = eventId.Name,
-        //    Category = category,
-        //    Exception = exception
-        //};
 
         dbLogger.WriteLog(new(message, exception is not null, Formatter.GetCurrentDateTime(Setting)));
     }

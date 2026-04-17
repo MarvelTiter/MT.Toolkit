@@ -1,4 +1,8 @@
-﻿### v0.0.2
+﻿### v2026.04.17
+- ⚡️支持结构化日志输出，可通过配置`StructuredFormatter`属性自定义日志格式
+- ⚡️文件日志保存新增按日志级别分文件保存，文件名称模板是`{date}_{category}_{level}_Part{Index}.log`
+
+### v0.0.2
 - 🛠重构日志配置功能，适配原生Logging的配置方式
 - 🛠在原生Logging配置的基础上，增加自定义配置项。查看`AddLocalFileLogger`和`AddDbLogger`的可选参数
 - ⚡️优化文件的日志构建逻辑，减少不必要的字符串拼接

@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<Authors>MarvelTiter</Authors>
 		<RepositoryUrl>https://github.com/MarvelTiter/MT.Toolkit</RepositoryUrl>
-		<Version>0.0.2</Version>
+		<Version>2026.04.17.1</Version>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<LangVersion>latest</LangVersion>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>

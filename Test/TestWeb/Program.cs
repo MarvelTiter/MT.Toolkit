@@ -12,6 +12,9 @@ builder.Services.AddRazorComponents()
 builder.Logging.AddLocalFileLogger(setting =>
 {
     setting.SaveByCategory = true;
+    setting.SaveByLevel = true;
+    setting.IncludeScopes = true;
+    setting.Structured = true;
 }).AddDbLogger(setting =>
 {
     setting.DbLoggerFacotry = () => new Dblogger();
