@@ -1,7 +1,50 @@
 ﻿@page "/"
-
+@using System.Diagnostics.CodeAnalysis
+@using LoggerProviderExtensions.HubLogger
+@using System.Text
+@implements IAsyncDisposable
 <PageTitle>Home</PageTitle>
-
-<h1>Hello, world!</h1>
-
+<div style="height:500px;overflow-y:auto">
+    @logContent.ToString()
+</div>
+<button @onclick="@Log">日志测试</button>
 Welcome to your new app.
+@code {
+    [Inject, NotNull] ILogger<Home>? Logger { get; set; }
+    [Inject, NotNull] IHubLoggerPublisher? Channel { get; set; }
+    private StringBuilder logContent = new();
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // _ = StartFetchLog();
+        Channel.OnLog += HandleLog;
+    }
+
+    private void HandleLog(LoggerProviderExtensions.StructuredLogEntry entry)
+    {
+        logContent.AppendLine($"{entry.Category}: {entry.MessageTemplate}");
+        Console.WriteLine($"{entry.Category}: {entry.MessageTemplate}");
+        InvokeAsync(StateHasChanged);
+    }
+
+    // private async Task StartFetchLog()
+    // {
+    //     await foreach (var item in Channel.LogEntries)
+    //     {
+    //         logContent.AppendLine($"{item.Category}: {item.MessageTemplate}");
+    //         Console.WriteLine($"{item.Category}: {item.MessageTemplate}");
+    //         StateHasChanged();
+    //     }
+    // }
+
+    private void Log()
+    {
+        Logger.LogInformation("This is a log message at {Time}", DateTime.Now);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Channel.OnLog -= HandleLog;
+        return ValueTask.CompletedTask;
+    }
+}

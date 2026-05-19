@@ -18,7 +18,8 @@ builder.Logging.AddLocalFileLogger(setting =>
 }).AddDbLogger(setting =>
 {
     setting.DbLoggerFacotry = () => new Dblogger();
-});
+}).AddHubLogger()
+;
 
 var app = builder.Build();
 var o = app.Services.GetService<IOptions<LoggerFilterOptions>>();

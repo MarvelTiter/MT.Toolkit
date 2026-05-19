@@ -1,4 +1,21 @@
-﻿### v2026.04.17
+﻿### v2026.05.19
+- ⚡️新增一个`HubLoggerProvider`，用于转发日志，将日志输出到其他地方
+```csharp
+
+// 添加服务
+builder.Logging.AddHubLogger();
+
+// 注入服务
+[Inject, NotNull] IHubLoggerPublisher? Channel { get; set; }
+
+//订阅日志
+Channel.OnLog += (logEntry) =>
+{
+    // 处理日志
+};
+```
+
+### v2026.04.17
 - ⚡️支持结构化日志输出，可通过配置`StructuredFormatter`属性自定义日志格式
 - ⚡️文件日志保存新增按日志级别分文件保存，文件名称模板是`{date}_{category}_{level}_Part{Index}.log`
 
