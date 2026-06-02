@@ -197,15 +197,15 @@ public static class MemberInfoExtension
     /// 创建获取属性值的委托
     /// </summary>
     /// <returns></returns>
-    public static Func<object, TProp> GetPropertyAccessor<
+    public static Func<object, object> GetPropertyAccessor<
 #if NET8_0_OR_GREATER
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
 #endif
-    TEntity, TProp>(this TEntity _, string propName)
+    TEntity>(this TEntity _, string propName)
     {
         var prop = typeof(TEntity).GetProperty(propName);
-        if (prop == null) return NullGetter<TProp>;
-        return prop.GetPropertyAccessor<TProp>();
+        if (prop == null) return NullGetter<object>;
+        return prop.GetPropertyAccessor<object>();
     }
 
     static TProp NullGetter<TProp>(object entity) => default!;

@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using MT.Toolkit.ExpressionHelper;
 using MT.Toolkit.ReflectionExtension;
 namespace ExpressionTest
@@ -39,12 +39,12 @@ namespace ExpressionTest
         public void CreateGetterSetterTest()
         {
             var u = new User();
-            var getter = u.GetPropertyAccessor<string>("Name");
-            Assert.IsTrue(getter.Invoke(u) == "Hello");
+            var getter = u.GetPropertyAccessor("Name");
+            Assert.IsTrue(getter.Invoke(u)?.ToString() == "Hello");
 
             var setter = u.GetPropertySetter("Name");
             setter.Invoke(u, "World");
-            Assert.IsTrue(getter.Invoke(u) == "World");
+            Assert.IsTrue(getter.Invoke(u)?.ToString() == "World");
         }
 
     }
