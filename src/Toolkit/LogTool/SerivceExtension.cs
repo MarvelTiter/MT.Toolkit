@@ -7,9 +7,8 @@ using System;
 
 namespace MT.Toolkit.LogTool
 {
-    /// <summary>
-    /// 
-    /// </summary>
+#pragma warning disable
+    [Obsolete("please use LoggerProviderExtensions instead.")]
     public static class SerivceExtension
     {
         [Obsolete]

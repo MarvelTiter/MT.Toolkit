@@ -4,16 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MT.Toolkit.Mapper
+namespace MT.Toolkit.Mapper;
+
+#pragma warning disable
+[Obsolete("使用AutoGenMapperGenerator代替")]
+public class MapperConfigProvider
 {
-	public class MapperConfigProvider
-	{
 
-		private static MapperConfig Config = new MapperConfig();
-		public static MapperConfig GetMapperConfig()
-		{
-			return Config;
-		}
+    private static MapperConfig Config = new MapperConfig();
+    public static MapperConfig GetMapperConfig()
+    {
+        return Config;
+    }
 
-	}
 }

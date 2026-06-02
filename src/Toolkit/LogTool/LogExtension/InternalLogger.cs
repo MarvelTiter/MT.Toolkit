@@ -3,52 +3,52 @@
 using System;
 using Microsoft.Extensions.Logging;
 
-namespace MT.Toolkit.LogTool.LogExtension
+namespace MT.Toolkit.LogTool.LogExtension;
+
+#pragma warning disable
+[Obsolete("please use LoggerProviderExtensions instead.")]
+internal class InternalLogger : ILogger
 {
+    private readonly string name;
+    private readonly Func<LoggerSetting> getCurrentConfig;
+    private readonly Logger logger;
+    public InternalLogger(string name, Func<LoggerSetting> getCurrentConfig)
+    {
+        this.name = name;
+        this.getCurrentConfig = getCurrentConfig;
+        logger = new Logger(this.getCurrentConfig());
+    }
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull
+    {
+        return NullScope.Instance;
+    }
 
-	internal class InternalLogger : ILogger
-	{
-		private readonly string name;
-		private readonly Func<LoggerSetting> getCurrentConfig;
-		private readonly Logger logger;
-		public InternalLogger(string name, Func<LoggerSetting> getCurrentConfig)
-		{
-			this.name = name;
-			this.getCurrentConfig = getCurrentConfig;
-			logger = new Logger(this.getCurrentConfig());
-		}
-		public IDisposable BeginScope<TState>(TState state) where TState : notnull
-		{
-			return NullScope.Instance;
-		}
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        return logger.IsEnabled(logLevel);
+    }
 
-		public bool IsEnabled(LogLevel logLevel)
-		{
-			return logger.IsEnabled(logLevel);
-		}
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+    {
+        if (!IsEnabled(logLevel))
+        {
+            return;
+        }
+        logger.Log(logLevel, state, formatter, name, eventId.Id, eventId.Name, exception);
+    }
 
-		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-		{
-			if (!IsEnabled(logLevel))
-			{
-				return;
-			}
-			logger.Log(logLevel, state, formatter, name, eventId.Id, eventId.Name, exception);
-		}
-
-		internal sealed class NullScope : IDisposable
-		{
-			public static NullScope Instance { get; } = new NullScope();
+    internal sealed class NullScope : IDisposable
+    {
+        public static NullScope Instance { get; } = new NullScope();
 
 
-			private NullScope()
-			{
-			}
+        private NullScope()
+        {
+        }
 
-			public void Dispose()
-			{
-			}
-		}
-	}
+        public void Dispose()
+        {
+        }
+    }
 }
 #endif

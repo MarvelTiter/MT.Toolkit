@@ -1,8 +1,13 @@
-﻿namespace MT.Toolkit.HttpHelper
+﻿
+#pragma warning disable
+
+using System;
+
+namespace MT.Toolkit.HttpHelper;
+
+[Obsolete("Use SoapRequestHelper Package instead.", true)]
+public enum SoapVersion
 {
-    public enum SoapVersion
-    {
-        Soap11,
-        Soap12,
-    }
+    Soap11,
+    Soap12,
 }

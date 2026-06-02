@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.LogTool.DbLogger;
 
+#pragma warning disable
+[Obsolete("please use LoggerProviderExtensions instead.")]
 internal class DbLoggerProvider : ILoggerProvider
 {
     private readonly ConcurrentDictionary<string, InternalDbLogger> loggers = new();

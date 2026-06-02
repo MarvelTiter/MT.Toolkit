@@ -8,49 +8,49 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MT.Toolkit.LogTool
+namespace MT.Toolkit.LogTool;
+#pragma warning disable
+[Obsolete("ConsoleLogger is deprecated, please use LoggerProviderExtensions instead.")]
+public class DatabaseLogger : ISimpleLogger
 {
-    public class DatabaseLogger : ISimpleLogger
+    private static Lazy<DatabaseLogger>? _instance;
+    private Lazy<IDbLogger>? _dbLogger;
+    private Lazy<IDbLogger> DbLogger => _dbLogger ??= new Lazy<IDbLogger>(() =>
     {
-        private static Lazy<DatabaseLogger>? _instance;
-        private Lazy<IDbLogger>? _dbLogger;
-        private Lazy<IDbLogger> DbLogger => _dbLogger ??= new Lazy<IDbLogger>(() =>
+        return LogConfig.DbLoggerFacotry?.Invoke() ?? throw new InvalidOperationException();
+    });
+    public static Lazy<DatabaseLogger> GetDbLogger(LoggerSetting setting)
+    {
+        _instance ??= new Lazy<DatabaseLogger>(() =>
         {
-            return LogConfig.DbLoggerFacotry?.Invoke() ?? throw new InvalidOperationException();
+            return new DatabaseLogger(setting);
         });
-        public static Lazy<DatabaseLogger> GetDbLogger(LoggerSetting setting)
+        return _instance;
+    }
+    static readonly ConcurrentQueue<LogInfo> logQueue = new();
+    public LoggerSetting LogConfig { get; set; }
+    private readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
+    Task dbTask;
+    private DatabaseLogger(LoggerSetting loggerSetting)
+    {
+        LogConfig = loggerSetting;
+        var token = CancellationTokenSource.Token;
+        dbTask = new Task(async () =>
         {
-            _instance ??= new Lazy<DatabaseLogger>(() =>
+            while (!CancellationTokenSource.IsCancellationRequested)
             {
-                return new DatabaseLogger(setting);
-            });
-            return _instance;
-        }
-        static readonly ConcurrentQueue<LogInfo> logQueue = new();
-        public LoggerSetting LogConfig { get; set; }
-        private readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
-        Task dbTask;
-        private DatabaseLogger(LoggerSetting loggerSetting)
-        {
-            LogConfig = loggerSetting;
-            var token = CancellationTokenSource.Token;
-            dbTask = new Task(async () =>
-            {
-                while (!CancellationTokenSource.IsCancellationRequested)
+                token.WaitHandle.WaitOne(TimeSpan.FromSeconds(1));
+                while (logQueue.TryDequeue(out var logInfo))
                 {
-                    token.WaitHandle.WaitOne(TimeSpan.FromSeconds(1));
-                    while (logQueue.TryDequeue(out var logInfo))
-                    {
-                        await DbLogger.Value.LogAsync(logInfo, token);
-                    }
+                    await DbLogger.Value.LogAsync(logInfo, token);
                 }
-            }, token, TaskCreationOptions.LongRunning);
-            dbTask.Start();
-        }
+            }
+        }, token, TaskCreationOptions.LongRunning);
+        dbTask.Start();
+    }
 
-        public void WriteLog(LogInfo logInfo)
-        {
-            logQueue.Enqueue(logInfo);
-        }
+    public void WriteLog(LogInfo logInfo)
+    {
+        logQueue.Enqueue(logInfo);
     }
 }

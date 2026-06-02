@@ -5,10 +5,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MT.Toolkit.LogTool.DbLogger
+namespace MT.Toolkit.LogTool.DbLogger;
+
+#pragma warning disable
+[Obsolete("ConsoleLogger is deprecated, please use LoggerProviderExtensions instead.")]
+public interface IDbLogger
 {
-    public interface IDbLogger
-    {
-        Task LogAsync(LogInfo data, CancellationToken cancellationToken);
-    }
+    Task LogAsync(LogInfo data, CancellationToken cancellationToken);
 }
