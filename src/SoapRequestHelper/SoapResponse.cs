@@ -232,6 +232,9 @@ public sealed class SoapResponse
         return dt;
     }
 
+#if NET8_0_OR_GREATER
+    [return: System.Diagnostics.CodeAnalysis.DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties | System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicFields)]
+#endif
     private static Type ConvertElementType(string type)
     {
         return type switch
@@ -245,10 +248,10 @@ public sealed class SoapResponse
             _ => typeof(string),
         };
     }
-    static readonly ConcurrentDictionary<Type, MethodInfo?> tryParseCache = [];
+
     private static object? Parse(string? input, Type type)
     {
-        if ( string.IsNullOrEmpty(input))
+        if (string.IsNullOrEmpty(input))
         {
             return default;
         }
@@ -257,20 +260,54 @@ public sealed class SoapResponse
             return input.Trim();
         }
         type = Nullable.GetUnderlyingType(type) ?? type;
-        var method = tryParseCache.GetOrAdd(type, t =>
+
+        if (TryParse(input, type, out var value))
         {
-            return t.GetMethod("TryParse", [typeof(string), t.MakeByRefType()]);
-        });
-        if (method == null)
-        {
-            return default;
+            return value;
         }
-        object?[] parameters = [input, default];
-        var r = method.Invoke(null, parameters);
-        if (r is bool b && b == true)
-        {
-            return parameters[1];
-        }
+
         return default;
+
+        static bool TryParse(string text, Type type, out object? value)
+        {
+            if (type == typeof(DateTime))
+            {
+                _ = DateTime.TryParse(text, out var v);
+                value = v;
+                return true;
+            }
+            else if (type == typeof(bool))
+            {
+                _ = bool.TryParse(text, out var v);
+                value = v;
+                return true;
+            }
+            else if (type == typeof(int))
+            {
+                _ = int.TryParse(text, out var v);
+                value = v;
+                return true;
+            }
+            else if (type == typeof(decimal))
+            {
+                _ = decimal.TryParse(text, out var v);
+                value = v;
+                return true;
+            }
+            else if (type == typeof(long))
+            {
+                _ = long.TryParse(text, out var v);
+                value = v;
+                return true;
+            }
+            else if (type == typeof(short))
+            {
+                _ = short.TryParse(text, out var v);
+                value = v;
+                return true;
+            }
+            value = default;
+            return false;
+        }
     }
 }

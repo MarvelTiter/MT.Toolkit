@@ -1,18 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net462;net6.0;net8.0</TargetFrameworks>
+		<TargetFrameworks>net462;net6.0;net8.0;net10.0</TargetFrameworks>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Authors>MarvelTiter</Authors>
 		<RepositoryUrl>https://github.com/MarvelTiter/MT.Toolkit</RepositoryUrl>
 		<RootNamespace>MT.Toolkit</RootNamespace>
-		<Version>2.1.9.0</Version>
+		<Version>2026.06.02.1</Version>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<AssemblyName>MT.Toolkit</AssemblyName>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<IsAotCompatible>true</IsAotCompatible>
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net462'">

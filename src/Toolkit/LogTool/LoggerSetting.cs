@@ -6,9 +6,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 #pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
-
+#pragma warning disable
 namespace MT.Toolkit.LogTool
 {
+    [Obsolete("please use LoggerProviderExtensions instead.")]
     public static class LoggerSettingExtensions
     {
         public static bool IsEnabled(this LoggerSetting loggerSetting, LogType logType, string? category, LogLevel logLevel)

@@ -2,110 +2,136 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace MT.Toolkit.DataTableExtension
+namespace MT.Toolkit.DataTableExtension;
+
+internal static class MapFromExpression<
+#if NET8_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+#endif
+T>
 {
-    public static class MapFromExpression<T>
+    static Dictionary<string, Action<T, DataRow>> actions = new Dictionary<string, Action<T, DataRow>>();
+    public static Action<T, DataRow> Build(DataColumnCollection cols)
     {
-        static Dictionary<string, Action<T, DataRow>> actions = new Dictionary<string, Action<T, DataRow>>();
-        public static Action<T, DataRow> Build(DataColumnCollection cols)
+        var columnNames = from col in cols.Cast<DataColumn>()
+                          select col.ColumnName;
+        var key = string.Join("_", columnNames);
+        if (actions.TryGetValue(key, out var action))
         {
-            var columnNames = from col in cols.Cast<DataColumn>()
-                              select col.ColumnName;
-            var key = string.Join("_", columnNames);
-            if (actions.TryGetValue(key, out var action))
-            {
-                return action;
-            }
-            action = CreateAction(cols);
-            actions.Add(key, action);
             return action;
         }
-
-        private static Action<T, DataRow> CreateAction(DataColumnCollection cols)
-        {
-            ParameterExpression rowExp = Expression.Parameter(typeof(DataRow), "row");
-            ParameterExpression tarExp = Expression.Parameter(typeof(T), "tar");
-            var tarType = typeof(T);
-            List<Expression> body = new List<Expression>();
-            // properties
-            var props = tarType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            foreach (DataColumn col in cols)
-            {
-                var prop = props.FirstOrDefault(p => p.Name.ToLower() == col.ColumnName.ToLower());
-                if (prop != null && prop.CanWrite)
-                {
-                    var valueExp = TableExpressionBase.GetTargetValueExpression(col, rowExp, prop.PropertyType);
-                    MethodCallExpression propAssign = Expression.Call(tarExp, prop.SetMethod, valueExp);
-                    body.Add(propAssign);
-                }
-            }
-            var block = Expression.Block(body);
-            var lambda = Expression.Lambda<Action<T, DataRow>>(block, tarExp, rowExp);
-            return lambda.Compile();
-        }
-
+        action = CreateAction(cols);
+        actions.Add(key, action);
+        return action;
     }
 
-    internal static class ExpressionUsedMethods
+    private static Action<T, DataRow> CreateAction(DataColumnCollection cols)
     {
-        public static MethodInfo DataColumnAdd = typeof(DataColumnCollection).GetMethod(nameof(DataColumnCollection.Add), [typeof(string), typeof(Type)])!;
-        public static MethodInfo DataRowSet = typeof(DataRow).GetMethod("set_Item", [typeof(string), typeof(object)])!;
+        ParameterExpression rowExp = Expression.Parameter(typeof(DataRow), "row");
+        ParameterExpression tarExp = Expression.Parameter(typeof(T), "tar");
+        var tarType = typeof(T);
+        List<Expression> body = new List<Expression>();
+        // properties
+        var props = tarType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        foreach (DataColumn col in cols)
+        {
+            var prop = props.FirstOrDefault(p => p.Name.Equals(col.ColumnName, StringComparison.CurrentCultureIgnoreCase));
+            if (prop != null && prop.CanWrite && prop.SetMethod is not null)
+            {
+                var valueExp = TableExpressionBase.GetTargetValueExpression(col, rowExp, prop.PropertyType);
+                MethodCallExpression propAssign = Expression.Call(tarExp, prop.SetMethod, valueExp);
+                body.Add(propAssign);
+            }
+        }
+        var block = Expression.Block(body);
+        var lambda = Expression.Lambda<Action<T, DataRow>>(block, tarExp, rowExp);
+        return lambda.Compile();
     }
 
-    internal static class MapToDataTableExtension<T>
+}
+
+internal static class ExpressionUsedMethods
+{
+    //public static MethodInfo DataColumnAdd = typeof(DataColumnCollection).GetMethod(nameof(DataColumnCollection.Add), [typeof(string), typeof(Type)])!;
+    //public static MethodInfo DataRowSet = typeof(DataRow).GetMethod("set_Item", [typeof(string), typeof(object)])!;
+#if NET8_0_OR_GREATER
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2111",
+        Justification = "通过 AddColumn 的 columnType 参数上的 DynamicallyAccessedMembers 保证安全，且实际调用时传入的类型已满足保留要求")]
+#endif
+    public static MethodInfo DataColumnAdd = typeof(ExpressionUsedMethods).GetMethod(nameof(AddColumn), [typeof(DataTable), typeof(string), typeof(Type)])!;
+    public static MethodInfo DataRowSet = typeof(ExpressionUsedMethods).GetMethod(nameof(SetRowValue), [typeof(DataRow), typeof(string), typeof(object)])!;
+    public static void AddColumn(DataTable dataTable, string columnName,
+#if NET8_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields|DynamicallyAccessedMemberTypes.PublicProperties)]
+#endif
+        Type columnType)
     {
-        private static Func<DataTable> createTable;
-        private static Action<T, DataRow> fillRow;
+        dataTable.Columns.Add(columnName, columnType);
+    }
 
-        static MapToDataTableExtension()
+    public static void SetRowValue(DataRow row, string columnName, object value)
+    {
+        row[columnName] = value;
+    }
+}
+
+internal static class MapToDataTableExtension<
+#if NET8_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+#endif
+T>
+{
+    private static readonly Func<DataTable> createTable;
+    private static readonly Action<T, DataRow> fillRow;
+
+    static MapToDataTableExtension()
+    {
+        createTable = BuildCreateTableFunc();
+        fillRow = BuildCreateRowFunc();
+    }
+
+    internal static DataTable GetDataTable() => createTable.Invoke();
+    internal static void FillDataRow(T value, DataRow row) => fillRow.Invoke(value, row);
+    private static Func<DataTable> BuildCreateTableFunc()
+    {
+        var dtExp = Expression.Variable(typeof(DataTable));
+        var ctorMethod = typeof(DataTable).GetConstructor([typeof(string)])!;
+        var newDt = Expression.New(ctorMethod, [Expression.Constant(typeof(T).Name, typeof(string))]);
+        var assign = Expression.Assign(dtExp, newDt);
+
+        List<Expression> body = [
+            dtExp,assign
+            ];
+        var props = typeof(T).GetProperties();
+        foreach (var item in props)
         {
-            createTable = BuildCreateTableFunc();
-            fillRow = BuildCreateRowFunc();
+            if (!item.CanRead) continue;
+            body.Add(Expression.Call(dtExp, ExpressionUsedMethods.DataColumnAdd, Expression.Constant(item.Name, typeof(string)), Expression.Constant(item.PropertyType, typeof(Type))));
         }
+        body.Add(dtExp);
+        var block = Expression.Block([dtExp], [.. body]);
+        var lambda = Expression.Lambda<Func<DataTable>>(block);
+        return lambda.Compile();
+    }
 
-        internal static DataTable GetDataTable() => createTable.Invoke();
-        internal static void FillDataRow(T value, DataRow row) => fillRow.Invoke(value, row);
-        private static Func<DataTable> BuildCreateTableFunc()
+    private static Action<T, DataRow> BuildCreateRowFunc()
+    {
+        var val = Expression.Parameter(typeof(T), "p");
+        var row = Expression.Parameter(typeof(DataRow), "r");
+        var props = typeof(T).GetProperties();
+        List<Expression> body = [];
+        foreach (var item in props)
         {
-            var dtExp = Expression.Variable(typeof(DataTable));
-            var ctorMethod = typeof(DataTable).GetConstructor([typeof(string)])!;
-            var newDt = Expression.New(ctorMethod, [Expression.Constant(typeof(T).Name, typeof(string))]);
-            var assign = Expression.Assign(dtExp, newDt);
-
-            List<Expression> body = [
-                dtExp,assign
-                ];
-            var props = typeof(T).GetProperties();
-            var columns = Expression.Property(dtExp, nameof(DataTable.Columns));
-            foreach (var item in props)
-            {
-                if (!item.CanRead) continue;
-                body.Add(Expression.Call(columns, ExpressionUsedMethods.DataColumnAdd, Expression.Constant(item.Name, typeof(string)), Expression.Constant(item.PropertyType, typeof(Type))));
-            }
-            body.Add(dtExp);
-            var block = Expression.Block([dtExp], [.. body]);
-            var lambda = Expression.Lambda<Func<DataTable>>(block);
-            return lambda.Compile();
+            if (!item.CanRead) continue;
+            body.Add(Expression.Call(row, ExpressionUsedMethods.DataRowSet, Expression.Constant(item.Name, typeof(string)), Expression.Convert(Expression.Property(val, item), typeof(object))));
         }
-
-        private static Action<T, DataRow> BuildCreateRowFunc()
-        {
-            var val = Expression.Parameter(typeof(T), "p");
-            var row = Expression.Parameter(typeof(DataRow), "r");
-            var props = typeof(T).GetProperties();
-            List<Expression> body = [];
-            foreach (var item in props)
-            {
-                if (!item.CanRead) continue;
-                body.Add(Expression.Call(row, ExpressionUsedMethods.DataRowSet, Expression.Constant(item.Name, typeof(string)), Expression.Convert(Expression.Property(val, item), typeof(object))));
-            }
-            var block = Expression.Block( [.. body]);
-            var lambda = Expression.Lambda<Action<T, DataRow>>(block, val, row);
-            return lambda.Compile();
-        }
+        var block = Expression.Block([.. body]);
+        var lambda = Expression.Lambda<Action<T, DataRow>>(block, val, row);
+        return lambda.Compile();
     }
 }

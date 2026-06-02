@@ -19,6 +19,8 @@ namespace MT.Toolkit.HttpHelper
     /// <summary>
     /// SOAP服务配置
     /// </summary>
+#pragma warning disable
+    [Obsolete("please use LoggerProviderExtensions instead.")]
     public class SoapServiceConfiguration
     {
         public const int DEFAULT_CONCURRENCY_LIMIT = 10;

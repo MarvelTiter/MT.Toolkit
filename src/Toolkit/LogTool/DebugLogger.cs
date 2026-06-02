@@ -2,22 +2,23 @@
 using System;
 using System.Diagnostics;
 
-namespace MT.Toolkit.LogTool
-{
-	public class DebugLogger : ISimpleLogger
-	{
-		public LoggerSetting LogConfig { get; set; }
+namespace MT.Toolkit.LogTool;
 
-        public DebugLogger(LoggerSetting configuration)
-        {
-            LogConfig = configuration;
-        }
-        
-        public void WriteLog(LogInfo logInfo)
-		{
-			Debug.Write(logInfo.LogHeader());
-			Debug.Write(logInfo.LogCategory());
-			Debug.Write(logInfo.LogBody());
-		}
-	}
+#pragma warning disable
+[Obsolete("please use LoggerProviderExtensions instead.")]
+public class DebugLogger : ISimpleLogger
+{
+    public LoggerSetting LogConfig { get; set; }
+
+    public DebugLogger(LoggerSetting configuration)
+    {
+        LogConfig = configuration;
+    }
+
+    public void WriteLog(LogInfo logInfo)
+    {
+        Debug.Write(logInfo.LogHeader());
+        Debug.Write(logInfo.LogCategory());
+        Debug.Write(logInfo.LogBody());
+    }
 }

@@ -5,15 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MT.Toolkit.LogTool.DbLogger
+namespace MT.Toolkit.LogTool.DbLogger;
+
+#pragma warning disable
+[Obsolete("please use LoggerProviderExtensions instead.")]
+public interface IDbLoggerSetting
 {
-    public interface IDbLoggerSetting
-    {
-        void SetDbWriteLevel(string category, LogLevel logLevel);
-        void SetDbLogInfoFilter(Func<LogInfo, bool> filter);
-        /// <summary>
-        /// 指定如何获取IDbLogger实例，否则默认从Ioc容器中获取该实例
-        /// </summary>
-        void SetDbLogger(Func<IDbLogger> factory);
-    }
+    void SetDbWriteLevel(string category, LogLevel logLevel);
+    void SetDbLogInfoFilter(Func<LogInfo, bool> filter);
+    /// <summary>
+    /// 指定如何获取IDbLogger实例，否则默认从Ioc容器中获取该实例
+    /// </summary>
+    void SetDbLogger(Func<IDbLogger> factory);
 }

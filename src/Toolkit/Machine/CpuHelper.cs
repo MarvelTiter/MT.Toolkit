@@ -8,7 +8,10 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.Machine
 {
-	public static class CpuHelper
+    /// <summary>
+    /// Cpu相关帮助类
+    /// </summary>
+    public static class CpuHelper
 	{
 		private static ICpu cpuHelper = PlatformHelper.GetCpuHelper();
 		/// <summary>

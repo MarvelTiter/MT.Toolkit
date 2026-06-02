@@ -15,7 +15,9 @@ namespace MT.Toolkit.XmlHelper
     public class XmlString
     {
         internal string? Value { get; private set; }
-
+        /// <summary>
+        /// 
+        /// </summary>
         public XmlString(string? str)
         {
             Value = str;
@@ -40,6 +42,9 @@ namespace MT.Toolkit.XmlHelper
 
         internal Lazy<XElement?> Xml { get; }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static implicit operator XmlString(string? str) => new(str);
         private static bool CheckRoot(string xml)
         {

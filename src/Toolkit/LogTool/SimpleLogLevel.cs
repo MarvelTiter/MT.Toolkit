@@ -2,7 +2,9 @@
 
 namespace MT.Toolkit.LogTool
 {
-	[Flags]
+#pragma warning disable
+    [Obsolete("please use LoggerProviderExtensions instead.")]
+    [Flags]
 	public enum LogType
 	{
 		Console = 1,
@@ -14,8 +16,9 @@ namespace MT.Toolkit.LogTool
 	/// <summary>
 	/// 日志级别
 	/// </summary>
+    [Obsolete("please use LoggerProviderExtensions instead.")]
 	public enum SimpleLogLevel
-	{
+    {
 		Trace,
 		/// <summary>
 		/// 信息级别

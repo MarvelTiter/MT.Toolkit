@@ -4,7 +4,9 @@ using System.Runtime.CompilerServices;
 
 namespace MT.Toolkit.LogTool
 {
-	public class SimpleLogger
+#pragma warning disable
+    [Obsolete("please use LoggerProviderExtensions instead.")]
+    public class SimpleLogger
 	{
 		static Logger? logger;
 		public static void Config(Action<LoggerSetting> action)

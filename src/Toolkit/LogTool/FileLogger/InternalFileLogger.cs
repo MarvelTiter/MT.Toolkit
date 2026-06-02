@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 namespace MT.Toolkit.LogTool.FileLogger;
 
+#pragma warning disable
+[Obsolete("please use LoggerProviderExtensions instead.")]
 internal class InternalFileLogger : ILogger
 {
     private readonly string category;

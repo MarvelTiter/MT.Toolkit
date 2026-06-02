@@ -2,12 +2,15 @@
 @using System.Diagnostics.CodeAnalysis
 @using LoggerProviderExtensions.HubLogger
 @using System.Text
+@using MT.Toolkit
 @implements IAsyncDisposable
 <PageTitle>Home</PageTitle>
 <div style="height:500px;overflow-y:auto">
     @logContent.ToString()
 </div>
 <button @onclick="@Log">日志测试</button>
+<button @onclick="@DebounceTest">Debounce</button>
+<button @onclick="@ThrottleTest">Throttle</button>
 Welcome to your new app.
 @code {
     [Inject, NotNull] ILogger<Home>? Logger { get; set; }
@@ -18,33 +21,42 @@ Welcome to your new app.
         base.OnInitialized();
         // _ = StartFetchLog();
         Channel.OnLog += HandleLog;
+        debounce = Debounce<string>.Create(Log2, 1000);
+        throttle = Throttle<string>.Create(Log2, 1000);
     }
 
     private void HandleLog(LoggerProviderExtensions.StructuredLogEntry entry)
     {
         logContent.AppendLine($"{entry.Category}: {entry.MessageTemplate}");
-        Console.WriteLine($"{entry.Category}: {entry.MessageTemplate}");
         InvokeAsync(StateHasChanged);
     }
-
-    // private async Task StartFetchLog()
-    // {
-    //     await foreach (var item in Channel.LogEntries)
-    //     {
-    //         logContent.AppendLine($"{item.Category}: {item.MessageTemplate}");
-    //         Console.WriteLine($"{item.Category}: {item.MessageTemplate}");
-    //         StateHasChanged();
-    //     }
-    // }
 
     private void Log()
     {
         Logger.LogInformation("This is a log message at {Time}", DateTime.Now);
     }
+    private void Log2(string type)
+    {
+        Logger.LogInformation("{type} log at {Time}", type, DateTime.Now);
+    }
+
+    private Debounce<string>? debounce;
+    private Throttle<string>? throttle;
+
+    private async Task DebounceTest()
+    {
+        _ = debounce!.InvokeAsync("DebounceTest");
+    }
+    private async Task ThrottleTest()
+    {
+        _ = throttle!.InvokeAsync("ThrottleTest");
+    }
 
     public ValueTask DisposeAsync()
     {
         Channel.OnLog -= HandleLog;
+        debounce!.Dispose();
+        throttle!.Dispose();
         return ValueTask.CompletedTask;
     }
 }

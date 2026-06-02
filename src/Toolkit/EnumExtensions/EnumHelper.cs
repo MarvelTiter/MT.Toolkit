@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -16,28 +18,40 @@ namespace MT.Toolkit.EnumExtensions
     /// </summary>
     public static class EnumHelper
     {
-        private static readonly ConcurrentDictionary<(Type, string), string> enumCache = [];
+        private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<MemberInfo, string>> enumCache = [];
         /// <summary>
-        /// 
+        /// 获取枚举的显示名称
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="enum"></param>
         /// <returns></returns>
-        public static string GetDisplayName<T>(this T @enum) where T : Enum
+        public static string GetDisplayName<
+#if NET8_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
+#endif
+        T>(this T @enum) where T : Enum
         {
-            return enumCache.GetOrAdd((typeof(T), @enum.ToString()), key =>
+            var et = typeof(T);
+            var member = et.GetMember(@enum.ToString()).First();
+            if (!enumCache.TryGetValue(et, out var edic))
             {
-                var member = key.Item1.GetMember(key.Item2).FirstOrDefault();
-                if (member != null)
+                edic = new();
+                enumCache.TryAdd(et, edic);
+            }
+            if (!edic.TryGetValue(member, out var des))
+            {
+                if (member.GetCustomAttribute<DisplayAttribute>() is { } displayAttr)
                 {
-                    var displayAttr = member.GetCustomAttribute<DisplayAttribute>();
-                    if (displayAttr is not null)
-                    {
-                        return displayAttr.Name ?? key.Item2;
-                    }
+                    des = displayAttr.Name;
                 }
-                return key.Item2;
-            });
+                else if (member.GetCustomAttribute<DescriptionAttribute>() is { } descriptionAttr)
+                {
+                    des = descriptionAttr.Description;
+                }
+                des ??= @enum.ToString();
+                edic.TryAdd(member, des);
+            }
+            return des;
         }
 
     }
