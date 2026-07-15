@@ -66,11 +66,18 @@ internal partial class LocalFileLoggerProcessor
     {
         logQueue.Enqueue(new LogItem(GetLogPath(LogConfig, category, logLevel), message));
     }
+    private readonly static Lazy<string> defaultLogFolder = new(() =>
+    {
+        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+    });
 
+    private static string GetLogFilePath(FileLoggerOptions setting) => string.IsNullOrWhiteSpace(setting.LogFileFolder) ?
+        defaultLogFolder.Value
+        : setting.LogFileFolder;
     private static string GetLogPath(FileLoggerOptions setting, string? category, LogLevel logLevel)
     {
         string newFilePath;
-        var logDir = setting.LogFileFolder ?? Path.Combine(Environment.CurrentDirectory, "logs");
+        var logDir = GetLogFilePath(setting);
         Directory.CreateDirectory(logDir);
         string extension = ".log";
         string fileNameNotExt = GetFileName(setting, category, logLevel);

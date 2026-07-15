@@ -1,41 +1,31 @@
 ﻿#if NET6_0_OR_GREATER
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 namespace LoggerProviderExtensions.FileLogger;
 
-internal class DeleteLogFileService(IOptionsMonitor<FileLoggerOptions> config) : BackgroundService
+internal class DeleteLogFileService(IOptionsMonitor<FileLoggerOptions> config, ILogger<DeleteLogFileService> logger) : BackgroundService
 {
-    //private readonly int? savedDays = config.CurrentValue.FileSavedDays;
+    private readonly static Lazy<string> defaultLogFolder = new(() =>
+    {
+        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+    });
+
+    private string LogFilePath => string.IsNullOrWhiteSpace(config.CurrentValue.LogFileFolder) ?
+        defaultLogFolder.Value
+        : config.CurrentValue.LogFileFolder;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        //if (!savedDays.HasValue)
-        //{
-        //    return ;
-        //}
-
-        //if (config.CurrentValue.FileSavedDays < 0)
-        //{
-        //    return ;
-        //}
-
         while (!stoppingToken.IsCancellationRequested)
         {
-            var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
-            if (!Directory.Exists(logPath))
+            if (!Directory.Exists(LogFilePath))
             {
                 await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
             }
             try
             {
-                var files = Directory.EnumerateFiles(logPath);
+                var files = Directory.EnumerateFiles(LogFilePath);
                 var deadline = DateTime.Now.AddDays(-1 * config.CurrentValue.FileSavedDays);
                 foreach (var file in files)
                 {
@@ -47,8 +37,9 @@ internal class DeleteLogFileService(IOptionsMonitor<FileLoggerOptions> config) :
                 }
                 await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
             }
-            catch (DirectoryNotFoundException)
+            catch (Exception ex)
             {
+                logger.LogError(ex, "日志文件清理服务异常");
                 await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
         }

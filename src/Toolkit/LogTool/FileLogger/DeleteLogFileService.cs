@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 namespace MT.Toolkit.LogTool.FileLogger;
 
+[Obsolete]
 internal class DeleteLogFileService(IOptionsMonitor<LoggerSetting> config) : BackgroundService
 {
     private readonly int? savedDays = config.CurrentValue.FileSavedDays;
