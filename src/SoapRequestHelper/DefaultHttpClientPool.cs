@@ -49,7 +49,7 @@ internal class DefaultHttpClientPool : IHttpClientPool
     /// <summary>
     /// 从池中获取一个 HttpClient 实例
     /// </summary>
-    public async ValueTask<HttpClient> GetAsync(HttpClientCreationContext context, CancellationToken cancellationToken = default)
+    public async Task<HttpClient> GetAsync(HttpClientCreationContext context, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(isDisposed, this);
         if (pool.TryDequeue(out var client))

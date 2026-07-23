@@ -11,7 +11,7 @@ public interface IHttpClientPool : IAsyncDisposable
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ValueTask<HttpClient> GetAsync(HttpClientCreationContext context, CancellationToken cancellationToken = default);
+    Task<HttpClient> GetAsync(HttpClientCreationContext context, CancellationToken cancellationToken = default);
     /// <summary>
     /// 归还HttpClient
     /// </summary>

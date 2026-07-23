@@ -68,7 +68,7 @@ internal partial class SoapService : ISoapService
     }
 
     #endregion
-    private readonly HttpRequestChannel<SoapRequest, HttpResponseMessage> requestChannel;
+    //private readonly HttpRequestChannel<SoapRequest, HttpResponseMessage> requestChannel;
 
     private readonly record struct SoapRequest(
         HttpClient Client,
@@ -82,7 +82,7 @@ internal partial class SoapService : ISoapService
     {
         this.configuration = configuration;
         this.logAction = logAction;
-        requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
+        //requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
         httpClientPool = configuration.HttpClientPool;
     }
 
@@ -91,22 +91,22 @@ internal partial class SoapService : ISoapService
         this.logAction = logAction;
         configuration = new SoapServiceConfiguration(name);
         configAction(configuration);
-        requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
+        //requestChannel = new(configuration.QueueCapacity, configuration.ConcurrencyLimit, ProcessSoapRequest);
         httpClientPool = configuration.HttpClientPool ?? throw new ArgumentNullException("未配置连接池");
     }
     #endregion
 
-    private async Task<HttpResponseMessage> ProcessSoapRequest(SoapRequest soapRequest)
-    {
-        var cancellationToken = soapRequest.CancellationToken;
-        var client = soapRequest.Client;
-        var start = StopwatchHelper.GetTimestamp();
-        HttpResponseMessage response = await client.SendAsync(soapRequest.RequestMessage, cancellationToken).ConfigureAwait(false);
-        var elapsed = StopwatchHelper.GetElapsedTime(start);
-        response.EnsureSuccessStatusCode();
-        logAction($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
-        return response;
-    }
+    //private async Task<HttpResponseMessage> ProcessSoapRequest(SoapRequest soapRequest)
+    //{
+    //    var cancellationToken = soapRequest.CancellationToken;
+    //    var client = soapRequest.Client;
+    //    var start = StopwatchHelper.GetTimestamp();
+    //    HttpResponseMessage response = await client.SendAsync(soapRequest.RequestMessage, cancellationToken).ConfigureAwait(false);
+    //    var elapsed = StopwatchHelper.GetElapsedTime(start);
+    //    response.EnsureSuccessStatusCode();
+    //    logAction($"{soapRequest.MethodName}: 耗时 {elapsed.TotalMilliseconds}ms");
+    //    return response;
+    //}
 
     public async ValueTask<SoapResponse> SendAsync(string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
@@ -133,17 +133,20 @@ internal partial class SoapService : ISoapService
 
     public async ValueTask<SoapResponse> SendAsync(HttpClient client, string methodName, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
-        var tcs = new TaskCompletionSource<HttpResponseMessage>();
+        //var tcs = new TaskCompletionSource<HttpResponseMessage>();
         string content = BuildSoapRequest(methodName, args);
         try
         {
             using HttpRequestMessage requestMessage = BuildRequestMessage(methodName, content);
 
-            var request = new SoapRequest(client, methodName, requestMessage, tcs, cancellationToken);
+            //var request = new SoapRequest(client, methodName, requestMessage, tcs, cancellationToken);
 
-            await requestChannel.WriteAsync(request);
+            //await requestChannel.WriteAsync(request);
 
-            using var response = await tcs.Task;
+            //using var response = await tcs.Task;
+
+            using var response = await client.SendAsync(requestMessage, cancellationToken);
+
             var start = StopwatchHelper.GetTimestamp();
             //var response = await client.SendAsync(requestMessage, cancellationToken);
             //// 处理响应
@@ -310,7 +313,7 @@ internal partial class SoapService : ISoapService
     public async ValueTask DisposeAsync()
     {
         if (disposedValue) return;
-        await requestChannel.DisposeAsync();
+        //await requestChannel.DisposeAsync();
         await httpClientPool.DisposeAsync();
         disposedValue = true;
     }

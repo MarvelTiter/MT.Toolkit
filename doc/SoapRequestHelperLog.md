@@ -1,5 +1,8 @@
 ﻿## 版本功能更新日志
 
+### v2026.07.23
+- 🛠移除`HttpRequestChannel`
+
 ### v2026.04.09
 - 🛠重构`SoapService`的HttpClient池，支持自定义池，或者直接使用`IHttpClientFactory`
 
